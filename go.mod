@@ -6,8 +6,10 @@ toolchain go1.23.6
 
 require (
 	github.com/go-resty/resty/v2 v2.8.0
+	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/mdp/qrterminal/v3 v3.2.0
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rs/zerolog v1.33.0
 	github.com/samber/lo v1.49.1
 	go.mau.fi/whatsmeow v0.0.0-20250316144733-e7e263bf2175
@@ -25,7 +27,6 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	go.mau.fi/libsignal v0.1.2 // indirect

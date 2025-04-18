@@ -33,6 +33,7 @@ func MenuImage() string {
 		"*!.mid* OpenMidjourney",
 		"",
 		"*A1111* - Premium GPU 💪",
+		"*!.reso* Set custom resolution",
 		"*!.wai* Waifu XL v5",
 		"*!.mei* Meina XL v6",
 	}, "\n")
@@ -66,6 +67,8 @@ func MenuWhat(query string) string {
 		return "[SDXL] Logo Redmond txt2img. Specializes in creating logo images."
 	case "i.mid":
 		return "Open source version of Midjourney V4 txt2img."
+	case "i.reso":
+		return "[A1111] Set custom resolution for image generation."
 	case "i.wai":
 		return "[A1111] Waifu XL v5 txt2img. Normal anime-style."
 	case "i.mei":

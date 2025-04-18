@@ -1,14 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/mdp/qrterminal/v3"
+	"github.com/nfnt/resize"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store/sqlstore"
@@ -54,15 +59,51 @@ func WaText(msg *events.Message, text string) {
 	}
 }
 
-func WaImage(msg *events.Message, image []byte, caption string) {
-	upr, err := meow.Upload(context.Background(), image, whatsmeow.MediaImage)
+func WaByte2ImgImg(b []byte) (image.Image, error) {
+	imgimg, _, err := image.Decode(bytes.NewReader(b))
+	if err == nil {
+		return imgimg, nil
+	}
+	pngimg, err := png.Decode(bytes.NewReader(b))
+	if err == nil {
+		return pngimg, nil
+	}
+	jpegimg, err := jpeg.Decode(bytes.NewReader(b))
+	if err == nil {
+		return jpegimg, nil
+	}
+	return nil, fmt.Errorf("unsupported image format")
+}
+
+func WaImage(msg *events.Message, img []byte, caption string) {
+	mime := http.DetectContentType(img)
+	upr, err := meow.Upload(context.Background(), img, whatsmeow.MediaImage)
 	if err != nil {
 		log.Error().Err(err).Msg("IMGUP")
 		WaReact(msg, "😢")
 		return
 	}
 
-	mime := http.DetectContentType(image)
+	// Create thumbnail
+	imgimg, err := WaByte2ImgImg(img)
+	if err != nil {
+		log.Error().Err(err).Msg("IMGCONV")
+	}
+	thumbimgimg := resize.Thumbnail(72, 72, imgimg, resize.Lanczos3)
+	thumbbuf := new(bytes.Buffer)
+	err = jpeg.Encode(thumbbuf, thumbimgimg, &jpeg.Options{Quality: 80})
+	if err != nil {
+		log.Error().Err(err).Msg("IMGTHUMBENC")
+		return
+	}
+	thumb := thumbbuf.Bytes()
+	thumbupr, err := meow.Upload(context.Background(), thumb, whatsmeow.MediaImage)
+	if err != nil {
+		log.Error().Err(err).Msg("IMGTHUMBUP")
+		return
+	}
+
+	// Reply with image
 	participant := msg.Info.MessageSource.Sender.String()
 	ximsg := waE2E.ImageMessage{
 		Caption:  &caption,
@@ -74,6 +115,11 @@ func WaImage(msg *events.Message, image []byte, caption string) {
 		FileEncSHA256: upr.FileEncSHA256,
 		FileSHA256:    upr.FileSHA256,
 		FileLength:    &upr.FileLength,
+
+		JPEGThumbnail:       thumb,
+		ThumbnailDirectPath: &thumbupr.DirectPath,
+		ThumbnailEncSHA256:  thumbupr.FileEncSHA256,
+		ThumbnailSHA256:     thumbupr.FileSHA256,
 
 		ContextInfo: &waE2E.ContextInfo{
 			StanzaID:      &msg.Info.ID,
@@ -104,6 +150,11 @@ func WaImage(msg *events.Message, image []byte, caption string) {
 		FileEncSHA256: upr.FileEncSHA256,
 		FileSHA256:    upr.FileSHA256,
 		FileLength:    &upr.FileLength,
+
+		JPEGThumbnail:       thumb,
+		ThumbnailDirectPath: &thumbupr.DirectPath,
+		ThumbnailEncSHA256:  thumbupr.FileEncSHA256,
+		ThumbnailSHA256:     thumbupr.FileSHA256,
 	}
 
 	rmsg := waE2E.Message{
