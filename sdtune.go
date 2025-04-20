@@ -25,6 +25,9 @@ func (chara *SdChara) Create(traits string, clothes string, postpos string, post
 }
 
 var SdTunes = map[string]map[string]string{
+	"elsie": {
+		"base": SdBox("GSYhJR3YKxsqHR0mGxko5NjgHSQxKyEZ2Bwd2CQtLB3YISUZ8unm6eHk2BokGRsj2CAZISrk", 72),
+	},
 	"rio": {
 		"base": SdBox("MhFQPENDRk73PFA8SgP3EQcFCjT3REBFOERA90lARgP3Tj9ASzz3PzhASQP3Q0ZFPvc/OEBJA/c/QEQ89zpMSwP3SkA7PENGOkJKAw==", 41),
 	},
@@ -38,9 +41,15 @@ var SdTunes = map[string]map[string]string{
 }
 
 var SdChars = map[string]SdChara{
+	"elsie": *new(SdChara).Create(
+		SdTunes["elsie"]["base"],
+		"dark_purple_japanese_clothes, sleeveless, [:purple_short_yukata, fingerless_gloves, white_elbow_gloves, white_thighhighs, zettai_ryouiki, thighs, :0.1] purple_choker, ",
+		"",
+		"alternate_skin_color, sleeves, side_slit, school_emblem, ",
+	),
 	"minami rio": *new(SdChara).Create(
 		SdTunes["rio"]["base"],
-		"[:grey skirt, pleated skirt,:0.4] school uniform, white shirt, serafuku, yellow neckerchief, ",
+		"school uniform, white shirt, serafuku, [:grey skirt, pleated skirt,:0.4] yellow neckerchief, ",
 		"",
 		"",
 	),
@@ -52,7 +61,7 @@ var SdChars = map[string]SdChara{
 	),
 	"lucy (cage)": *new(SdChara).Create(
 		SdTunes["lucy"]["base"]+" "+SdTunes["lucy"]["cage"],
-		"[:purple_skirt, pleated_skirt, plaid_skirt, :0.3] white_shirt, short_sleeves, plaid_bowtie, purple bowtie, ",
+		"white_shirt, short_sleeves, plaid_bowtie, [:purple_skirt, pleated_skirt, plaid_skirt, :0.3] purple bowtie, ",
 		"",
 		"lazy_eye, green_eyes, purple_eyes, large_breasts, breast_pocket, ",
 	),
@@ -69,6 +78,8 @@ var SdChars = map[string]SdChara{
 		"green_eyes, ",
 	),
 }
+
+var SdTurbo = SdEdge("MjMwIC0=", 0.7, 66)
 
 func SdCube(base string, pow int) string {
 	enc := []byte(base)

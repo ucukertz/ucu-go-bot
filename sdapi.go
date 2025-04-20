@@ -4,7 +4,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -18,11 +20,12 @@ var (
 )
 
 type SdCkpt struct {
-	name     string
-	group    string
-	sampler  string
-	n_sample uint8
-	prompt   SdPrompt
+	name      string
+	group     string
+	sampler   string
+	n_sample  uint8
+	cfg_scale float32
+	prompt    SdPrompt
 }
 
 type SdPrompt struct {
@@ -32,11 +35,16 @@ type SdPrompt struct {
 	postneg string
 }
 
-func (ckpt *SdCkpt) Create(name string, group string, sampler string, n_sample uint8) *SdCkpt {
+func (ckpt *SdCkpt) Create(name string, group string) *SdCkpt {
 	ckpt.name = name
 	ckpt.group = lo.If(len(group) > 0, group).Else("xl-booru")
+	return ckpt
+}
+
+func (ckpt *SdCkpt) Sampling(sampler string, n_sample uint8, cfg_scale float32) *SdCkpt {
 	ckpt.sampler = lo.If(len(sampler) > 0, sampler).Else("Euler a")
 	ckpt.n_sample = lo.If(n_sample != 0, n_sample).Else(32)
+	ckpt.cfg_scale = lo.If(cfg_scale != 0, cfg_scale).Else(7.0)
 	return ckpt
 }
 
@@ -50,14 +58,32 @@ func (ckpt *SdCkpt) AddPrompt(prepos string, postpos string, preneg string, post
 
 var xbpostpos_default = "BREAK vibrant_colors, colorful, masterpiece, best quality, amazing quality, very aesthetic, absurdres, newest, "
 var xbpostneg_default = fmt.Sprintln("chibi, bald, bad anatomy, poorly drawn, deformed anatomy, deformed fingers, censored, mosaic_censoring, bar_censor, shota, white_pupils, empty_eyes, multicolored_hair,",
-	"BREAK lowres, (bad quality, worst quality:1.2), sketch, jpeg artifacts, censor, blurry, watermark")
+	"BREAK lowres, (bad quality, worst quality:1.2), sketch, jpeg artifacts, censor, blurry, watermark, ")
 
 var SdCkpts = map[string]SdCkpt{
-	"!i.wai": *new(SdCkpt).Create("wai", "", "", 32).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
-	"!i.mei": *new(SdCkpt).Create("mei", "", "", 32).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
+	"!i.wai": *new(SdCkpt).Create("wai", "").Sampling("", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
+	"!i.mei": *new(SdCkpt).Create("mei", "").Sampling("", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
+	"!i.fwa": *new(SdCkpt).Create("fuwa", "").Sampling("", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
+	"!i.fwt": *new(SdCkpt).Create("fuwa", "").Sampling("", 16, 2).AddPrompt("", xbpostpos_default+SdTurbo, "", xbpostneg_default),
 }
 
 func SdApi(msg *events.Message, cmd string) {
+	bluff := lo.ValueOr(SdBluff, msg.Info.Sender.User, false)
+	if bluff {
+		SdBluff[msg.Info.Sender.User] = false
+		time.Sleep(30 * time.Second)
+		WaReact(msg, "⏳")
+		sec := rand.Intn(10) + 10
+		time.Sleep(time.Duration(sec) * time.Second)
+		img, err := os.ReadFile("assets/bluff.jpg")
+		if err != nil {
+			WaSaad(msg, err)
+			return
+		}
+		WaImage(msg, img, "")
+		return
+	}
+
 	ckpt, ok := SdCkpts[cmd]
 	if !ok {
 		WaSaadStr(msg, "SD CKPT NOT FOUND")
@@ -157,10 +183,10 @@ func SdApi(msg *events.Message, cmd string) {
 			"negative_prompt":   neg,
 			"sampler_name":      ckpt.sampler,
 			"steps":             ckpt.n_sample,
-			"cfg_scale":         7,
+			"cfg_scale":         ckpt.cfg_scale,
 			"width":             reso.Width,
 			"height":            reso.Height,
-			"override_settings": map[string]any{"sd_model_checkpoint": ckpt.name},
+			"override_settings": map[string]any{"sd_model_checkpoint": ckpt.name, "CLIP_stop_at_last_layers": 2},
 		}
 		r, err := SdHttpc.R().SetBody(body).Post("/sdapi/v1/txt2img")
 		if err != nil {
@@ -197,6 +223,7 @@ type SdReso struct {
 	Height int
 }
 
+var SdBluff = map[string]bool{}
 var SdActiveReso = map[string]SdReso{}
 
 var SdResos = map[string]SdReso{
@@ -223,6 +250,10 @@ func SdCmdChk(msg *events.Message, cmd string) bool {
 		} else {
 			WaText(msg, "Resolution not found. Choices: \nsq, h1, h2, h3, w1, w2, w3\n\nExample: `!i.reso sq`")
 		}
+		return true
+	case "!i.bluff":
+		SdBluff[msg.Info.Sender.User] = true
+		WaReact(msg, "😏")
 		return true
 	case "!s.tune":
 		go SdTune(msg)
