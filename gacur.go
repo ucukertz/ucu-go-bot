@@ -11,8 +11,8 @@ import (
 )
 
 func GachaTokke(msg *events.Message) {
-	roll := rand.IntN(100)
-	if roll > 1 {
+	roll := rand.IntN(1000)
+	if roll > 50 {
 		return
 	}
 
@@ -30,7 +30,7 @@ func GachaTokke(msg *events.Message) {
 		SetBody(map[string]any{"text": aians, "safe": true, "redirect": true}).
 		Post(ENV_BASEURL_MEMEGEN)
 	if err != nil {
-		WaSaad(msg, err)
+		WaText(msg, aians)
 		return
 	}
 
@@ -156,7 +156,7 @@ func CurZeta(msg *events.Message) {
 }
 
 func GachaRoll(msg *events.Message) {
-	GachaTokke(msg)
+	go GachaTokke(msg)
 }
 
 func Gacur(msg *events.Message) {

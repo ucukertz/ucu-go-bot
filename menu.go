@@ -10,9 +10,9 @@ import (
 func MenuTop() string {
 	return strings.Join([]string{
 		"*Ucukertz WA bot*",
-		"*!ai* Youbot",
+		"*!ai* Gemini",
 		"*!cai* ChatGPT",
-		"*!gai* Gemini Pro",
+		"*!yai* YouBot",
 		"*!img* Flux-schnell",
 		"*!imgm* Advanced image gen menu",
 		"*!what* More explanation for commands (ex: '!what ai')",
@@ -22,6 +22,20 @@ func MenuTop() string {
 func MenuImage() string {
 	return strings.Join([]string{
 		"*Advanced image gen menu*",
+		"*A1111* - [Modal]",
+		"*!i.fwt* Fuwa v7 Turbo",
+		"*!i.fwa* Fuwa v7",
+		"*!i.mei* Meina v6",
+		"*!i.wai* Waifu v5",
+		"",
+		"_A1111 utilities_",
+		"*!i.reso* Set custom resolution",
+		"*!i.bluff* Bluff",
+		"",
+		"*Natural Language Editing* - [Modal]",
+		"*!i.flx* Flux Kontext [WIP]",
+		"",
+		"*Legacy Stable Diffusion* - Free",
 		"*!i.sxl* Stable Diffusion XL",
 		"*!i.std* Stable Diffusion",
 		"*!i.some* Something v2",
@@ -31,27 +45,17 @@ func MenuImage() string {
 		"*!i.pix* PixelArt",
 		"*!i.logo* LogoRedmond",
 		"*!i.mid* OpenMidjourney",
-		"",
-		"*A1111* - Premium GPU 💪",
-		"*!i.wai* Waifu XL v5",
-		"*!i.mei* Meina XL v6",
-		"*!i.fwa* Fuwa XL v7",
-		"*!i.fwt* Fuwa XL v7 Turbo",
-		"",
-		"_utilities_",
-		"*!i.reso* Set custom resolution",
-		"*!i.bluff* Bluff",
 	}, "\n")
 }
 
 func MenuWhat(query string) string {
 	switch query {
 	case "ai":
-		return "YouBot, ask anything. Cannot browse the web."
+		return "Gemini, ask anything. Can process pictures and documents."
 	case "cai":
 		return "ChatGPT, ask anything. Capable of browsing the web. Slightly slower to response."
-	case "gai":
-		return "Gemini Pro, ask anything. Up-to-date info but may refuse to answer."
+	case "yai":
+		return "YouBot, ask anything. Frequently out of service."
 	case "img":
 		return "Flux-schnell txt2img. Distilled version of model superior to SD3."
 	case "i.sxl":
@@ -84,6 +88,8 @@ func MenuWhat(query string) string {
 		return "[A1111] Set custom resolution for image generation."
 	case "i.bluff":
 		return "[A1111] Next generation outputs bluff image."
+	case "i.flx":
+		return "Flux Kontext txtimg2img. Natural Language Editing. [WIP]"
 	case "what":
 		return "*U wot m8?*"
 	default:

@@ -258,14 +258,18 @@ func WaMsgStr(msg *events.Message) string {
 	if conversation := msg.Message.GetConversation(); len(conversation) > 0 {
 		return conversation
 	}
-
 	if extendedMsg := msg.Message.GetExtendedTextMessage().GetText(); len(extendedMsg) > 0 {
 		return extendedMsg
 	}
-
-	// if editedContent := WaMsgStr(msg.Message.GetProtocolMessage().GetEditedMessage()); len(editedContent) > 0 {
-	// 	return editedContent
-	// }
+	if imageMsg := msg.Message.GetImageMessage(); imageMsg != nil && imageMsg.Caption != nil {
+		return *imageMsg.Caption
+	}
+	if videoMsg := msg.Message.GetVideoMessage(); videoMsg != nil && videoMsg.Caption != nil {
+		return *videoMsg.Caption
+	}
+	if documentMsg := msg.Message.GetDocumentMessage(); documentMsg != nil && documentMsg.Caption != nil {
+		return *documentMsg.Caption
+	}
 
 	return ""
 }
@@ -273,6 +277,40 @@ func WaMsgStr(msg *events.Message) string {
 func WaMsgQry(msg *events.Message) string {
 	split := strings.Split(WaMsgStr(msg), " ")[1:]
 	return strings.Join(split, " ")
+}
+
+func WaMsgMedia(msg *events.Message) []byte {
+	if img := msg.Message.GetImageMessage(); img != nil {
+		res, err := meow.Download(context.Background(), img)
+		if err != nil {
+			WaSaadStr(msg, "MEDIA IMG GET: "+err.Error())
+			return nil
+		}
+		return res
+	} else if video := msg.Message.GetVideoMessage(); video != nil {
+		res, err := meow.Download(context.Background(), video)
+		if err != nil {
+			WaSaadStr(msg, "MEDIA VID GET: "+err.Error())
+			return nil
+		}
+		return res
+	} else if audio := msg.Message.GetAudioMessage(); audio != nil {
+		res, err := meow.Download(context.Background(), audio)
+		if err != nil {
+			WaSaadStr(msg, "MEDIA AUD GET: "+err.Error())
+			return nil
+		}
+		return res
+	} else if document := msg.Message.GetDocumentMessage(); document != nil {
+		res, err := meow.Download(context.Background(), document)
+		if err != nil {
+			WaSaadStr(msg, "MEDIA DOC GET: "+err.Error())
+			return nil
+		}
+		return res
+	}
+
+	return nil
 }
 
 func cmdHandler(msg *events.Message) {
@@ -331,11 +369,11 @@ func eventHandler(evt any) {
 
 func WaInit() {
 	dbLog := waLog.Stdout("Database", "DEBUG", true)
-	container, err := sqlstore.New("sqlite3", "./wa-login.db?_foreign_keys=on", dbLog)
+	container, err := sqlstore.New(context.Background(), "sqlite3", "./wa-login.db?_foreign_keys=on", dbLog)
 	if err != nil {
 		panic(err)
 	}
-	deviceStore, err := container.GetFirstDevice()
+	deviceStore, err := container.GetFirstDevice(context.Background())
 	if err != nil {
 		panic(err)
 	}

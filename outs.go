@@ -18,7 +18,7 @@ type OutsDest struct {
 }
 
 func OutsDestMake() OutsDest {
-	return OutsDest{lock: make(chan struct{}, 1), reply: make(chan *events.Message, 0), textBuffer: new(string)}
+	return OutsDest{lock: make(chan struct{}, 1), reply: make(chan *events.Message), textBuffer: new(string)}
 }
 
 func (o OutsDest) Lock() {
@@ -153,7 +153,7 @@ func OutsCheck(msg *events.Message) {
 
 func OutsCmdChk(msg *events.Message, cmd string) bool {
 	switch cmd {
-	case "!ai":
+	case "!yai":
 		go OutsText(msg, "15854968266")
 		return true
 	case "!cai":
