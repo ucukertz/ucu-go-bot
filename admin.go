@@ -10,7 +10,7 @@ import (
 )
 
 func AdminCmdChk(msg *events.Message, cmd string) bool {
-	if !strings.Contains(msg.Info.Sender.User, "3405") {
+	if !strings.Contains(msg.Info.Sender.User, "234") {
 		return false
 	}
 

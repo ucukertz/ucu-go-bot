@@ -88,6 +88,8 @@ func WaImage(msg *events.Message, img []byte, caption string) {
 	imgimg, err := WaByte2ImgImg(img)
 	if err != nil {
 		log.Error().Err(err).Msg("IMGCONV")
+		WaSaadStr(msg, "IMGCONV: "+err.Error())
+		return
 	}
 	thumbimgimg := resize.Thumbnail(72, 72, imgimg, resize.Lanczos3)
 	thumbbuf := new(bytes.Buffer)
@@ -250,6 +252,10 @@ func WaSaadStr(msg *events.Message, sad string) {
 	WaSaad(msg, fmt.Errorf(sad))
 }
 
+func WaMsgUser(msg *events.Message) string {
+	return msg.Info.Sender.User
+}
+
 func WaMsgStr(msg *events.Message) string {
 	if msg == nil {
 		return ""
@@ -347,6 +353,10 @@ func eventHandler(evt any) {
 			}
 		}
 		if v.Info.IsFromMe {
+			return
+		}
+		if ENV_DEV_MODE == "1" && !strings.Contains(WaMsgUser(v), "234") {
+			log.Info().Str("user", WaMsgUser(v)).Msg("DEV MODE: Skipping message from user")
 			return
 		}
 

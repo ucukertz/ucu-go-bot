@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
+	"image/png"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/nfnt/resize"
 	"github.com/samber/lo"
 	"go.mau.fi/whatsmeow/types/events"
 	"google.golang.org/genai"
@@ -25,7 +30,7 @@ func ChatReset[T any](msg *events.Message, history T) T {
 var GaiChatClient *genai.Client = nil
 var GaiChat *genai.Chat = nil
 
-func GaiSingleText(query string, hint string) (string, error) {
+func ChatGaiOneText(query string, hint string) (string, error) {
 	gai, err := genai.NewClient(context.Background(), &genai.ClientConfig{
 		APIKey:  ENV_TOKEN_GEMINI,
 		Backend: genai.BackendGeminiAPI})
@@ -52,11 +57,11 @@ func GaiSingleText(query string, hint string) (string, error) {
 	return res, nil
 }
 
-func GaiChatReset() (*genai.Chat, error) {
+func ChatGaiReset() (*genai.Chat, error) {
 	return GaiChatClient.Chats.Create(context.Background(), GEMINI_MODEL, nil, nil)
 }
 
-func GaiConvo(msg *events.Message) {
+func ChatGaiConvo(msg *events.Message) {
 	var err error
 	if GaiChatClient == nil {
 		GaiChatClient, err = genai.NewClient(context.Background(), &genai.ClientConfig{
@@ -73,7 +78,7 @@ func GaiConvo(msg *events.Message) {
 		if GaiChat != nil && len(GaiChat.History(false)) >= CHAT_HISTORY_MAX_LEN {
 			WaReact(msg, "😵‍💫")
 		}
-		GaiChat, err = GaiChatReset()
+		GaiChat, err = ChatGaiReset()
 		if err != nil {
 			WaSaadStr(msg, "GAI RESET: "+err.Error())
 			return
@@ -130,13 +135,75 @@ func GaiConvo(msg *events.Message) {
 	}
 }
 
+func ChatKontext(msg *events.Message) {
+	t_start := time.Now()
+	defer func() {
+		log.Info().Str("took", fmt.Sprintf("%s", time.Since(t_start).Round(time.Second))).Msg("KONTEXT END")
+	}()
+
+	var reqbody struct {
+		Prompt string `json:"prompt,omitempty"`
+		Img    string `json:"input_image,omitempty"`
+	}
+
+	img := WaMsgMedia(msg)
+	if img == nil {
+		// frown emoji
+		WaSaadStr(msg, "No image to edit ☹️")
+		return
+	}
+
+	imgimg, err := WaByte2ImgImg(img)
+	if err != nil {
+		log.Error().Err(err).Msg("IMGCONV")
+		WaSaadStr(msg, "IMGCONV: "+err.Error())
+		return
+	}
+
+	imgr := resize.Thumbnail(1344, 1344, imgimg, resize.Lanczos3)
+	thumbbuf := new(bytes.Buffer)
+	if err := png.Encode(thumbbuf, imgr); err != nil {
+		log.Error().Err(err).Msg("PNG ENCODE")
+		WaSaadStr(msg, "PNG ENCODE: "+err.Error())
+		return
+	}
+
+	reqbody.Img = base64.StdEncoding.EncodeToString(thumbbuf.Bytes())
+	reqbody.Prompt = WaMsgQry(msg)
+
+	r, err := HttpcBase.SetBasicAuth(ENV_BAUTH_SDAPI_USER, ENV_BAUTH_SDAPI_PASS).R().
+		SetBody(reqbody).Post(ENV_BASEURL_KONTEXT)
+	if err != nil {
+		WaSaadStr(msg, "KONTEXT: "+err.Error())
+		return
+	}
+	if r.StatusCode() != http.StatusOK {
+		if r.StatusCode() == http.StatusTooManyRequests {
+			WaText(msg, "MODAL ZERO")
+			return
+		} else {
+			WaSaadStr(msg, "KONTEXT DED "+r.Status())
+			return
+		}
+	}
+
+	image, err := base64.StdEncoding.DecodeString(r.String())
+	if err != nil {
+		WaSaadStr(msg, "KONTEXT DECODE: "+err.Error())
+		return
+	}
+	t_all := time.Since(t_start).Round(time.Second)
+	t_str := fmt.Sprintf("%s", t_all)
+	WaImage(msg, image, t_str)
+}
+
 func ChatCmdChk(msg *events.Message, cmd string) bool {
 	switch cmd {
 	case "!ai":
-		go GaiConvo(msg)
+		go ChatGaiConvo(msg)
 		return true
-	case "!flx":
-		WaText(msg, "Flux Kontext is a work in progress. It is not yet ready for use.")
+	case "!i.flx":
+		go ChatKontext(msg)
 		return true
 	}
 

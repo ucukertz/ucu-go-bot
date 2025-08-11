@@ -80,6 +80,7 @@ var SdChars = map[string]SdChara{
 }
 
 var SdTurbo = SdEdge("MjMwIC0=", 0.7, 66)
+var SdFws = SdBox("EggbBgPPCRzUEhwVFQPQ08caDwwVFQgQBhQQGg8I08cUFhkQEhwZCAYMFdPHFwgTDAYaEhAV0w==", 89)
 
 func SdCube(base string, pow int) string {
 	enc := []byte(base)

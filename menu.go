@@ -13,7 +13,7 @@ func MenuTop() string {
 		"*!ai* Gemini",
 		"*!cai* ChatGPT",
 		"*!yai* YouBot",
-		"*!img* Flux-schnell",
+		"*!img* SDXL++",
 		"*!imgm* Advanced image gen menu",
 		"*!what* More explanation for commands (ex: '!what ai')",
 	}, "\n")
@@ -23,6 +23,7 @@ func MenuImage() string {
 	return strings.Join([]string{
 		"*Advanced image gen menu*",
 		"*A1111* - [Modal]",
+		"*!i.fws* Fuwa v7 Super",
 		"*!i.fwt* Fuwa v7 Turbo",
 		"*!i.fwa* Fuwa v7",
 		"*!i.mei* Meina v6",
@@ -31,9 +32,10 @@ func MenuImage() string {
 		"_A1111 utilities_",
 		"*!i.reso* Set custom resolution",
 		"*!i.bluff* Bluff",
+		"*!i.seed* Set or lock seed",
 		"",
 		"*Natural Language Editing* - [Modal]",
-		"*!i.flx* Flux Kontext [WIP]",
+		"*!i.flx* Flux Kontext",
 		"",
 		"*Legacy Stable Diffusion* - Free",
 		"*!i.sxl* Stable Diffusion XL",
@@ -57,7 +59,7 @@ func MenuWhat(query string) string {
 	case "yai":
 		return "YouBot, ask anything. Frequently out of service."
 	case "img":
-		return "Flux-schnell txt2img. Distilled version of model superior to SD3."
+		return "SDXL++. Flux quality, SDXL speed."
 	case "i.sxl":
 		return "Stable Diffusion XL txt2img. Massive breakthrough compared to earlier versions of SD."
 	case "i.std":
@@ -83,7 +85,9 @@ func MenuWhat(query string) string {
 	case "i.fwa":
 		return "[A1111] Fuwa v7 txt2img. Stable clean cutesy anime-style."
 	case "i.fwt":
-		return "[A1111] Fuwa v7 turbo txt2img. Stable cutesy anime-style, vibrant colors, 2x faster."
+		return "[A1111] Fuwa v7 txt2img. Stable cutesy anime-style, vibrant colors, 2x faster."
+	case "i.fws":
+		return "[A1111] Fuwa v7 txt2img. Super stable cutesy anime-style, vibrant colors, 2x faster."
 	case "i.reso":
 		return "[A1111] Set custom resolution for image generation."
 	case "i.bluff":

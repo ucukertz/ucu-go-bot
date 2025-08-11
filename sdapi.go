@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -16,7 +15,7 @@ import (
 )
 
 var (
-	SDAPI_TIMEOUT     = 50 * time.Second
+	SDAPI_TIMEOUT     = 60 * time.Second
 	SDAPI_MAX_ATTEMPT = 10
 )
 
@@ -66,21 +65,22 @@ var SdCkpts = map[string]SdCkpt{
 	"!i.mei": *new(SdCkpt).Create("mei").Sampling("", "", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
 	"!i.fwa": *new(SdCkpt).Create("fuwa").Sampling("", "", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
 	"!i.fwt": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt("", xbpostpos_default+SdTurbo, "", xbpostneg_default),
+	"!i.fws": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt(SdFws, xbpostpos_default+SdTurbo, "", xbpostneg_default),
 }
 
 func SdApi(msg *events.Message, cmd string) {
-	user := msg.Info.Sender.User
-	uConfig := lo.ValueOr(SdActiveUcfg, user, SdDefaultUcfg)
+	user := WaMsgUser(msg)
+	ucfg := lo.ValueOr(SdActiveUcfg, user, SdDefaultUcfg)
 
-	bluff := uConfig.Bluff
+	bluff := ucfg.Bluff
 	if bluff {
-		uConfig.Bluff = false
-		SdActiveUcfg[user] = uConfig
+		ucfg.Bluff = false
+		SdSetUcfg(msg, user, ucfg)
 
-		sec := rand.Intn(20) + 20
+		sec := GachaRand64(30, 50)
 		time.Sleep(time.Duration(sec) * time.Second)
 		WaReact(msg, "⏳")
-		sec = rand.Intn(10) + 10
+		sec = GachaRand64(10, 20)
 		time.Sleep(time.Duration(sec) * time.Second)
 		img, err := os.ReadFile("assets/bluff.jpg")
 		if err != nil {
@@ -168,6 +168,11 @@ func SdApi(msg *events.Message, cmd string) {
 		if err != nil {
 			attempt++
 		} else if r.StatusCode() != http.StatusOK {
+			if r.StatusCode() == http.StatusTooManyRequests {
+				WaText(msg, "MODAL ZERO")
+				return
+			}
+
 			attempt++
 		} else if r.StatusCode() == http.StatusOK {
 			break
@@ -181,7 +186,7 @@ func SdApi(msg *events.Message, cmd string) {
 	log.Info().Msg("[SD NEGATIVE] " + neg)
 
 	// Start generation
-	seed := lo.If(uConfig.Seed != -1, uConfig.Seed).Else((time.Now().UnixNano() + int64(rand.Intn(999999999))) / int64(rand.Intn(1000)))
+	seed := lo.If(ucfg.Seed != -1, ucfg.Seed).Else(GachaRand64(1e9, 9e9))
 	for {
 		if attempt > SDAPI_MAX_ATTEMPT {
 			WaSaadStr(msg, "SD CANNOT REAL GEN")
@@ -194,8 +199,8 @@ func SdApi(msg *events.Message, cmd string) {
 			"scheduler":         ckpt.scheduler,
 			"steps":             ckpt.n_sample,
 			"cfg_scale":         ckpt.cfg_scale,
-			"width":             uConfig.Reso.Width,
-			"height":            uConfig.Reso.Height,
+			"width":             ucfg.Reso.Width,
+			"height":            ucfg.Reso.Height,
 			"seed":              seed,
 			"override_settings": map[string]any{"sd_model_checkpoint": ckpt.name, "CLIP_stop_at_last_layers": 2},
 		}
@@ -258,45 +263,53 @@ type SdUcfg struct {
 var SdActiveUcfg = map[string]SdUcfg{}
 var SdDefaultUcfg = SdUcfg{Bluff: false, Reso: SdResos["sq"], Seed: -1}
 
+func SdSetUcfg(msg *events.Message, user string, uconfig SdUcfg) {
+	if _, ok := SdActiveUcfg[user]; !ok {
+		WaText(msg, "Hi, user "+msg.Info.Sender.User+"!")
+	}
+	SdActiveUcfg[user] = uconfig
+}
+
 func SdCmdChk(msg *events.Message, cmd string) bool {
 	if _, ok := SdCkpts[cmd]; ok {
 		go SdApi(msg, cmd)
 		return true
 	}
 
-	user := msg.Info.Sender.User
-	config := lo.ValueOr(SdActiveUcfg, user, SdDefaultUcfg)
+	user := WaMsgUser(msg)
+	ucfg := lo.ValueOr(SdActiveUcfg, user, SdDefaultUcfg)
+
 	switch cmd {
 	case "!i.reso":
 		if reso, ok := SdResos[WaMsgQry(msg)]; ok {
 
-			config.Reso = reso
-			SdActiveUcfg[user] = config
+			ucfg.Reso = reso
+			SdSetUcfg(msg, user, ucfg)
 			WaText(msg, fmt.Sprintf("A1111 resolution set to %s for you 🫶", reso.name))
 		} else {
 			WaText(msg, "Resolution not found. Choices: \nsq, h1, h2, h3, w1, w2, w3\n\nExample: `!i.reso sq`")
 		}
 		return true
 	case "!i.bluff":
-		config.Bluff = true
-		SdActiveUcfg[user] = config
+		ucfg.Bluff = true
+		SdSetUcfg(msg, user, ucfg)
 		WaReact(msg, "😏")
 		return true
 	case "!i.seed":
-		var seed int64 = config.Seed
+		var seed int64 = ucfg.Seed
 		qry := WaMsgQry(msg)
 		if parsed, err := strconv.ParseInt(qry, 10, 64); err == nil {
 			seed = parsed
 			WaReact(msg, "🔒")
 		} else if seed == -1 {
-			seed = (time.Now().UnixNano() + int64(rand.Intn(999999999))) / int64(rand.Intn(1000))
+			seed = GachaRand64(1e9, 9e9)
 			WaReact(msg, "🔒")
 		} else if seed != -1 {
 			seed = -1
 			WaReact(msg, "🎲")
 		}
-		config.Seed = seed
-		SdActiveUcfg[user] = config
+		ucfg.Seed = seed
+		SdSetUcfg(msg, user, ucfg)
 		return true
 	case "!s.tune":
 		go SdTune(msg)

@@ -7,9 +7,11 @@ import (
 )
 
 var (
-	ENV_LOADED = ""
+	ENV_LOADED   = ""
+	ENV_DEV_MODE = ""
 
 	ENV_BASEURL_SDAPI       = ""
+	ENV_BASEURL_KONTEXT     = ""
 	ENV_BASEURL_HUGGINGFACE = ""
 	ENV_BASEURL_MEMEGEN     = ""
 
@@ -22,8 +24,10 @@ var (
 
 func EnvLoad() {
 	ENV_LOADED = os.Getenv("ENV_LOADED")
+	ENV_DEV_MODE = os.Getenv("DEV_MODE")
 
 	ENV_BASEURL_SDAPI = os.Getenv("BASEURL_SDAPI")
+	ENV_BASEURL_KONTEXT = os.Getenv("BASEURL_KONTEXT")
 	ENV_BASEURL_HUGGINGFACE = os.Getenv("BASEURL_HUGGINGFACE")
 	ENV_BASEURL_MEMEGEN = os.Getenv("BASEURL_MEMEGEN")
 

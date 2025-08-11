@@ -10,14 +10,25 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 )
 
+func GachaRand64(min int64, max int64) int64 {
+	return rand.Int64N(max-min+1) + min
+}
+
 func GachaTokke(msg *events.Message) {
-	roll := rand.IntN(1000)
+	if len(WaMsgStr(msg)) == 0 {
+		return
+	}
+	if strings.HasPrefix(WaMsgStr(msg), "!") {
+		return
+	}
+
+	roll := GachaRand64(0, 1000)
 	if roll > 50 {
 		return
 	}
 
 	hint := "Respond to user messages with two sentences at most. Be as memey as possible."
-	aians, err := GaiSingleText(WaMsgStr(msg), hint)
+	aians, err := ChatGaiOneText(WaMsgStr(msg), hint)
 	if err != nil {
 		WaSaad(msg, err)
 	}
@@ -63,7 +74,7 @@ func CurHehe(msg *events.Message) {
 
 	if CurHeheEnd.After(time.Now()) {
 		go func(m *events.Message) {
-			sec := rand.IntN(120)
+			sec := GachaRand64(20, 120)
 			time.Sleep(time.Duration(sec) * time.Second)
 			WaReact(msg, "😡")
 		}(msg)
@@ -106,7 +117,7 @@ func CurTehe(msg *events.Message) {
 
 	if CurTeheEnd.After(time.Now()) {
 		go func(m *events.Message) {
-			sec := rand.IntN(120)
+			sec := GachaRand64(20, 120)
 			time.Sleep(time.Duration(sec) * time.Second)
 			WaReact(msg, "😛")
 		}(msg)
@@ -136,14 +147,15 @@ func CurZeta(msg *events.Message) {
 	}
 	if strings.Contains(strings.ToLower(WaMsgStr(msg)), "zeta") {
 		CurZetaCntr++
-		if CurZetaCntr == 1 {
+		switch CurZetaCntr {
+		case 1:
 			img, err := os.ReadFile("assets/disco.jpg")
 			if err != nil {
 				WaSaad(msg, err)
 				return
 			}
 			WaImage(msg, img, "You know what time is it?")
-		} else if CurZetaCntr == 2 {
+		case 2:
 			vid, err := os.ReadFile("assets/disco.mp4")
 			if err != nil {
 				WaSaad(msg, err)
@@ -167,10 +179,11 @@ func Gacur(msg *events.Message) {
 }
 
 func GacurCmdChk(msg *events.Message, cmd string) bool {
-	if cmd == "!jail" {
+	switch cmd {
+	case "!jail":
 		CurHeheAct(CurHeheScope)
 		return true
-	} else if cmd == "!jwail" {
+	case "!jwail":
 		CurTeheAct(CurTeheScope)
 		return true
 	}
