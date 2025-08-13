@@ -19,6 +19,8 @@ import (
 const (
 	CHAT_HISTORY_MAX_LEN = 50
 	GEMINI_MODEL         = "gemini-2.5-flash"
+
+	KONTEXT_TIMEOUT = 300 * time.Second
 )
 
 // Generic chat reset
@@ -117,7 +119,7 @@ func ChatGaiConvo(msg *events.Message) {
 			}
 		}
 		if part.FileData != nil && len(part.FileData.FileURI) > 0 {
-			r, err := HttpcBase.R().Get(part.FileData.FileURI)
+			r, err := HttpcBase.Clone().R().Get(part.FileData.FileURI)
 			if err != nil {
 				WaSaadStr(msg, "GAI URL FL:"+err.Error())
 				return
@@ -148,7 +150,6 @@ func ChatKontext(msg *events.Message) {
 
 	img := WaMsgMedia(msg)
 	if img == nil {
-		// frown emoji
 		WaSaadStr(msg, "No image to edit ☹️")
 		return
 	}
@@ -171,8 +172,8 @@ func ChatKontext(msg *events.Message) {
 	reqbody.Img = base64.StdEncoding.EncodeToString(thumbbuf.Bytes())
 	reqbody.Prompt = WaMsgQry(msg)
 
-	r, err := HttpcBase.SetBasicAuth(ENV_BAUTH_SDAPI_USER, ENV_BAUTH_SDAPI_PASS).R().
-		SetBody(reqbody).Post(ENV_BASEURL_KONTEXT)
+	r, err := HttpcBase.Clone().SetTimeout(KONTEXT_TIMEOUT).SetBasicAuth(ENV_BAUTH_SDAPI_USER, ENV_BAUTH_SDAPI_PASS).
+		R().SetBody(reqbody).Post(ENV_BASEURL_KONTEXT)
 	if err != nil {
 		WaSaadStr(msg, "KONTEXT: "+err.Error())
 		return

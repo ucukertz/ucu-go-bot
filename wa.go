@@ -88,7 +88,6 @@ func WaImage(msg *events.Message, img []byte, caption string) {
 	imgimg, err := WaByte2ImgImg(img)
 	if err != nil {
 		log.Error().Err(err).Msg("IMGCONV")
-		WaSaadStr(msg, "IMGCONV: "+err.Error())
 		return
 	}
 	thumbimgimg := resize.Thumbnail(72, 72, imgimg, resize.Lanczos3)

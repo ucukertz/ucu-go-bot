@@ -37,7 +37,7 @@ func GachaTokke(msg *events.Message) {
 		aians = strings.Split(aians, ".")[0]
 	}
 
-	r, err := HttpcBase.R().
+	r, err := HttpcBase.Clone().R().
 		SetBody(map[string]any{"text": aians, "safe": true, "redirect": true}).
 		Post(ENV_BASEURL_MEMEGEN)
 	if err != nil {

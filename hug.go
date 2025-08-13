@@ -33,7 +33,7 @@ var hugs = map[string]hugmodel{
 }
 
 func Hug(msg *events.Message, model string, query string, attempt int) ([]byte, error) {
-	r, err := HttpcBase.
+	r, err := HttpcBase.Clone().
 		SetBaseURL(ENV_BASEURL_HUGGINGFACE).
 		SetAuthToken(ENV_TOKEN_HUGGING).
 		SetTimeout(HUG_RETRY_SEC).
