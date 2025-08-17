@@ -156,7 +156,7 @@ func SdApi(msg *events.Message, cmd string) {
 	}
 
 	attempt := 0
-	SdHttpc := HttpcBase.Clone().SetBaseURL(ENV_BASEURL_SDAPI).SetBasicAuth(ENV_BAUTH_SDAPI_USER, ENV_BAUTH_SDAPI_PASS).SetTimeout(SDAPI_TIMEOUT)
+	SdHttpc := HttpcBase().SetBaseURL(ENV_BASEURL_SDAPI).SetBasicAuth(ENV_BAUTH_SDAPI_USER, ENV_BAUTH_SDAPI_PASS).SetTimeout(SDAPI_TIMEOUT)
 
 	// Check server readiness
 	for {

@@ -23,7 +23,7 @@ func GachaTokke(msg *events.Message) {
 	}
 
 	roll := GachaRand64(0, 1000)
-	if roll > 50 {
+	if roll > 25 {
 		return
 	}
 
@@ -37,7 +37,7 @@ func GachaTokke(msg *events.Message) {
 		aians = strings.Split(aians, ".")[0]
 	}
 
-	r, err := HttpcBase.Clone().R().
+	r, err := HttpcBase().R().
 		SetBody(map[string]any{"text": aians, "safe": true, "redirect": true}).
 		Post(ENV_BASEURL_MEMEGEN)
 	if err != nil {

@@ -20,7 +20,7 @@ type hugmodel struct {
 }
 
 var hugs = map[string]hugmodel{
-	"!img":    {"black-forest-labs/FLUX.1-dev", ""},
+	"!img":    {"stabilityai/stable-diffusion-xl-base-1.0", ""},
 	"!i.sxl":  {"stabilityai/stable-diffusion-xl-base-1.0", ""},
 	"!i.std":  {"stabilityai/stable-diffusion-2-1", ""},
 	"!i.some": {"NoCrypt/SomethingV2_2", "masterpiece, best quality, ultra-detailed"},
@@ -33,7 +33,7 @@ var hugs = map[string]hugmodel{
 }
 
 func Hug(msg *events.Message, model string, query string, attempt int) ([]byte, error) {
-	r, err := HttpcBase.Clone().
+	r, err := HttpcBase().
 		SetBaseURL(ENV_BASEURL_HUGGINGFACE).
 		SetAuthToken(ENV_TOKEN_HUGGING).
 		SetTimeout(HUG_RETRY_SEC).

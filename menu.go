@@ -13,7 +13,7 @@ func MenuTop() string {
 		"*!ai* Gemini",
 		"*!cai* ChatGPT",
 		"*!yai* YouBot",
-		"*!img* SDXL++",
+		"*!img* SDXL",
 		"*!imgm* Advanced image gen menu",
 		"*!what* More explanation for commands (ex: '!what ai')",
 	}, "\n")
@@ -59,7 +59,7 @@ func MenuWhat(query string) string {
 	case "yai":
 		return "YouBot, ask anything. Frequently out of service."
 	case "img":
-		return "SDXL++. Flux quality, SDXL speed."
+		return "Stable Diffusion XL txt2img. Massive breakthrough compared to earlier versions of SD."
 	case "i.sxl":
 		return "Stable Diffusion XL txt2img. Massive breakthrough compared to earlier versions of SD."
 	case "i.std":

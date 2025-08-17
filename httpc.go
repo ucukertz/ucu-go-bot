@@ -11,11 +11,13 @@ import (
 	"github.com/samber/lo"
 )
 
-var HttpcBase = resty.New().
-	OnBeforeRequest(HttpcMidwareBeforeReq).
-	OnSuccess(HttpcMidwareSuccess).
-	OnError(HttpcMidwareErr).
-	EnableTrace()
+func HttpcBase() *resty.Client {
+	return resty.New().
+		OnBeforeRequest(HttpcMidwareBeforeReq).
+		OnSuccess(HttpcMidwareSuccess).
+		OnError(HttpcMidwareErr).
+		EnableTrace()
+}
 
 type HttpcCtxKey string
 
