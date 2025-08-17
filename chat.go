@@ -88,6 +88,9 @@ func ChatGaiConvo(msg *events.Message) {
 	}
 
 	qryMedia := WaMsgMedia(msg)
+	if qryMedia == nil {
+		qryMedia = WaMsgMediaQuoted(msg)
+	}
 	mime := http.DetectContentType(qryMedia)
 
 	var r *genai.GenerateContentResponse
@@ -150,8 +153,11 @@ func ChatKontext(msg *events.Message) {
 
 	img := WaMsgMedia(msg)
 	if img == nil {
-		WaSaadStr(msg, "No image to edit ☹️")
-		return
+		img = WaMsgMediaQuoted(msg)
+		if img == nil {
+			WaSaadStr(msg, "No image to edit ☹️")
+			return
+		}
 	}
 
 	imgimg, err := WaByte2ImgImg(img)
@@ -200,10 +206,10 @@ func ChatKontext(msg *events.Message) {
 
 func ChatCmdChk(msg *events.Message, cmd string) bool {
 	switch cmd {
-	case "!ai":
+	case AdminDevDiff("!xai", "!ai"):
 		go ChatGaiConvo(msg)
 		return true
-	case lo.If(ENV_DEV_MODE != "1", "!i.flx").Else("!x.flx"):
+	case AdminDevDiff("!i.flx", "!i.flx"):
 		go ChatKontext(msg)
 		return true
 	}

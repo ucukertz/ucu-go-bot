@@ -318,6 +318,48 @@ func WaMsgMedia(msg *events.Message) []byte {
 	return nil
 }
 
+func WaMsgMediaQuoted(msg *events.Message) []byte {
+	if msg.Message.GetExtendedTextMessage() == nil {
+		return nil
+	}
+	quoted := msg.Message.GetExtendedTextMessage().GetContextInfo().GetQuotedMessage()
+	if quoted == nil {
+		return nil
+	}
+
+	if img := quoted.GetImageMessage(); img != nil {
+		res, err := meow.Download(context.Background(), img)
+		if err != nil {
+			WaSaadStr(msg, "MEDIA QIMG GET: "+err.Error())
+			return nil
+		}
+		return res
+	} else if video := quoted.GetVideoMessage(); video != nil {
+		res, err := meow.Download(context.Background(), video)
+		if err != nil {
+			WaSaadStr(msg, "MEDIA QVID GET: "+err.Error())
+			return nil
+		}
+		return res
+	} else if audio := quoted.GetAudioMessage(); audio != nil {
+		res, err := meow.Download(context.Background(), audio)
+		if err != nil {
+			WaSaadStr(msg, "MEDIA QAUD GET: "+err.Error())
+			return nil
+		}
+		return res
+	} else if document := quoted.GetDocumentMessage(); document != nil {
+		res, err := meow.Download(context.Background(), document)
+		if err != nil {
+			WaSaadStr(msg, "MEDIA QDOC GET: "+err.Error())
+			return nil
+		}
+		return res
+	}
+
+	return nil
+}
+
 func cmdHandler(msg *events.Message) {
 	cmd := strings.Split(WaMsgStr(msg), " ")[0]
 

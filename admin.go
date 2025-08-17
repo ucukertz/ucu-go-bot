@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
 	"go.mau.fi/whatsmeow/types/events"
 )
 
@@ -32,4 +33,9 @@ func AdminCmdChk(msg *events.Message, cmd string) bool {
 	}
 
 	return false
+}
+
+// Returns the development version of a variable if in dev mode, otherwise returns the production version.
+func AdminDevDiff[T any](dev T, prod T) T {
+	return lo.If(ENV_DEV_MODE == "1", dev).Else(prod)
 }
