@@ -92,8 +92,10 @@ func MenuWhat(query string) string {
 		return "[A1111] Set custom resolution for image generation."
 	case "i.bluff":
 		return "[A1111] Next generation outputs bluff image."
+	case "i.seed":
+		return "[A1111] Send only `!i.seed` to toggle seed randomness. Send `!i.seed <number>` to set a specific seed."
 	case "i.flx":
-		return "Flux Kontext txtimg2img. Natural Language Editing. [WIP]"
+		return "Flux Kontext txtimg2img. Natural Language Editing."
 	case "what":
 		return "*U wot m8?*"
 	default:

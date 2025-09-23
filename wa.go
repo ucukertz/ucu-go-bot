@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -248,7 +249,7 @@ func WaSaad(msg *events.Message, err error) {
 }
 
 func WaSaadStr(msg *events.Message, sad string) {
-	WaSaad(msg, fmt.Errorf(sad))
+	WaSaad(msg, errors.New(sad))
 }
 
 func WaMsgUser(msg *events.Message) string {
@@ -284,38 +285,41 @@ func WaMsgQry(msg *events.Message) string {
 	return strings.Join(split, " ")
 }
 
-func WaMsgMedia(msg *events.Message) []byte {
-	if img := msg.Message.GetImageMessage(); img != nil {
+func WaMsgMediaE2E(e2e *waE2E.Message) []byte {
+	if img := e2e.GetImageMessage(); img != nil {
 		res, err := meow.Download(context.Background(), img)
 		if err != nil {
-			WaSaadStr(msg, "MEDIA IMG GET: "+err.Error())
-			return nil
-		}
-		return res
-	} else if video := msg.Message.GetVideoMessage(); video != nil {
-		res, err := meow.Download(context.Background(), video)
-		if err != nil {
-			WaSaadStr(msg, "MEDIA VID GET: "+err.Error())
-			return nil
-		}
-		return res
-	} else if audio := msg.Message.GetAudioMessage(); audio != nil {
-		res, err := meow.Download(context.Background(), audio)
-		if err != nil {
-			WaSaadStr(msg, "MEDIA AUD GET: "+err.Error())
-			return nil
-		}
-		return res
-	} else if document := msg.Message.GetDocumentMessage(); document != nil {
-		res, err := meow.Download(context.Background(), document)
-		if err != nil {
-			WaSaadStr(msg, "MEDIA DOC GET: "+err.Error())
 			return nil
 		}
 		return res
 	}
-
+	if video := e2e.GetVideoMessage(); video != nil {
+		res, err := meow.Download(context.Background(), video)
+		if err != nil {
+			return nil
+		}
+		return res
+	}
+	if audio := e2e.GetAudioMessage(); audio != nil {
+		res, err := meow.Download(context.Background(), audio)
+		if err != nil {
+			return nil
+		}
+		return res
+	}
+	if document := e2e.GetDocumentMessage(); document != nil {
+		res, err := meow.Download(context.Background(), document)
+		if err != nil {
+			return nil
+		}
+		return res
+	}
 	return nil
+}
+
+func WaMsgMedia(msg *events.Message) []byte {
+	e2e := msg.Message
+	return WaMsgMediaE2E(e2e)
 }
 
 func WaMsgMediaQuoted(msg *events.Message) []byte {
@@ -327,37 +331,7 @@ func WaMsgMediaQuoted(msg *events.Message) []byte {
 		return nil
 	}
 
-	if img := quoted.GetImageMessage(); img != nil {
-		res, err := meow.Download(context.Background(), img)
-		if err != nil {
-			WaSaadStr(msg, "MEDIA QIMG GET: "+err.Error())
-			return nil
-		}
-		return res
-	} else if video := quoted.GetVideoMessage(); video != nil {
-		res, err := meow.Download(context.Background(), video)
-		if err != nil {
-			WaSaadStr(msg, "MEDIA QVID GET: "+err.Error())
-			return nil
-		}
-		return res
-	} else if audio := quoted.GetAudioMessage(); audio != nil {
-		res, err := meow.Download(context.Background(), audio)
-		if err != nil {
-			WaSaadStr(msg, "MEDIA QAUD GET: "+err.Error())
-			return nil
-		}
-		return res
-	} else if document := quoted.GetDocumentMessage(); document != nil {
-		res, err := meow.Download(context.Background(), document)
-		if err != nil {
-			WaSaadStr(msg, "MEDIA QDOC GET: "+err.Error())
-			return nil
-		}
-		return res
-	}
-
-	return nil
+	return WaMsgMediaE2E(quoted)
 }
 
 func cmdHandler(msg *events.Message) {

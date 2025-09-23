@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -124,7 +125,7 @@ func OutsText(msg *events.Message, phone string) {
 	waitDur := 1 * time.Minute
 	dest, ok := OutsDests[phone]
 	if !ok {
-		log.Error().Err(fmt.Errorf(phone)).Msg("INVALID OUTS")
+		log.Error().Err(errors.New(phone)).Msg("INVALID OUTS")
 	}
 	if dest.WIP() {
 		WaReact(msg, "🐢")

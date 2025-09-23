@@ -59,7 +59,7 @@ func ChatGaiOneText(query string, hint string) (string, error) {
 	return res, nil
 }
 
-func ChatGaiReset() (*genai.Chat, error) {
+func ChatGaiEmpty() (*genai.Chat, error) {
 	return GaiChatClient.Chats.Create(context.Background(), GEMINI_MODEL, nil, nil)
 }
 
@@ -80,9 +80,13 @@ func ChatGaiConvo(msg *events.Message) {
 		if GaiChat != nil && len(GaiChat.History(false)) >= CHAT_HISTORY_MAX_LEN {
 			WaReact(msg, "😵‍💫")
 		}
-		GaiChat, err = ChatGaiReset()
+		GaiChat, err = ChatGaiEmpty()
 		if err != nil {
 			WaSaadStr(msg, "GAI RESET: "+err.Error())
+			return
+		}
+		if WaMsgQry(msg) == "/reset" {
+			WaText(msg, "No thoughts. Head's empty. 👍")
 			return
 		}
 	}
