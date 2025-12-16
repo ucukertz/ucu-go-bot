@@ -419,8 +419,8 @@ func cmdHandler(msg *events.Message) {
 		return
 	} else if ok := HugLegacyCmdChk(msg, cmd); ok {
 		return
-	} else if ok := ChatCmdChk(msg, cmd); ok {
-		return
+		// } else if ok := ChatCmdChk(msg, cmd); ok {
+		// 	return
 	} else if ok := OutsCmdChk(msg, cmd); ok {
 		return
 	} else if ok := MenuCmdChk(msg, cmd); ok {
@@ -448,7 +448,9 @@ func eventHandler(evt any) {
 		if v.Info.IsFromMe {
 			return
 		}
-		if ENV_DEV_MODE == "1" && !IsAdmin(v) && !IsOutsPhone(v) {
+
+		OutsCapture(v)
+		if ENV_DEV_MODE == "1" && !IsAdmin(v) {
 			log.Info().Str("user", WaMsgUser(v)).Msg("DEV MODE: Skipping message from user")
 			return
 		}
@@ -458,7 +460,6 @@ func eventHandler(evt any) {
 
 		if len(WaMsgStr(v)) > 0 {
 			Gacur(v)
-			OutsCheck(v)
 
 			if strings.HasPrefix(msgstr, "!") {
 				cmdHandler(v)

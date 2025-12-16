@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var dlvl = AdminDevDiff(zerolog.DebugLevel, zerolog.InfoLevel) // Default level
+var dlvl = zerolog.InfoLevel // Default level
 var log = zerolog.New(zerolog.ConsoleWriter{TimeFormat: "2006/01/02 - 15:04:05.000", Out: os.Stdout, NoColor: true}).With().Timestamp().Logger()
 
 func LoggerInit() {

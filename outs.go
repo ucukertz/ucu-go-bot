@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -13,13 +12,21 @@ import (
 )
 
 type OutsDest struct {
+	send_phone string
+	rcv_phone  string
 	lock       chan struct{}
 	reply      chan *events.Message
 	textBuffer *string
 }
 
-func OutsDestMake() OutsDest {
-	return OutsDest{lock: make(chan struct{}, 1), reply: make(chan *events.Message), textBuffer: new(string)}
+func OutsDestMake(send_phone, rcv_phone string) OutsDest {
+	return OutsDest{
+		send_phone: send_phone,
+		rcv_phone:  rcv_phone,
+		lock:       make(chan struct{}, 1),
+		reply:      make(chan *events.Message),
+		textBuffer: new(string),
+	}
 }
 
 func (o OutsDest) Lock() {
@@ -50,24 +57,12 @@ func (o OutsDest) Wait(t time.Duration) bool {
 	}
 }
 
-var (
-	OUTS_PHONE_CHATGPT = "30722505109681"
-)
-
-func IsOutsPhone(msg *events.Message) bool {
-	if msg.Info.Sender.User == OUTS_PHONE_CHATGPT {
-		return true
-	}
-	return false
-}
-
 var OutsDests = map[string]OutsDest{
-	OUTS_PHONE_CHATGPT: OutsDestMake(),
+	"!cai": OutsDestMake("18002428478", "30722505109681"),
 }
 
-func OutsFilterReply(msg *events.Message, reply *events.Message) (string, bool) {
-	if strings.Contains(reply.Info.Sender.User, OUTS_PHONE_CHATGPT) {
-		dest := OutsDests[OUTS_PHONE_CHATGPT]
+func OutsFilterReply(msg *events.Message, dest OutsDest, reply *events.Message) (string, bool) {
+	if strings.Contains(reply.Info.Sender.User, dest.rcv_phone) {
 		*dest.textBuffer = WaMsgStr(reply)
 
 		finished := false
@@ -91,8 +86,8 @@ func OutsFilterReply(msg *events.Message, reply *events.Message) (string, bool) 
 	return WaMsgStr(reply), true
 }
 
-func OutsExec(msg *events.Message, phone string, req *waE2E.Message) {
-	_, err := meow.SendMessage(context.Background(), types.NewJID(phone, types.DefaultUserServer), req)
+func OutsExec(msg *events.Message, dest OutsDest, req *waE2E.Message) {
+	_, err := meow.SendMessage(context.Background(), types.NewJID(dest.send_phone, types.DefaultUserServer), req)
 	if err != nil {
 		log.Error().Err(err).Msg("REQ TEXT")
 	} else {
@@ -100,7 +95,6 @@ func OutsExec(msg *events.Message, phone string, req *waE2E.Message) {
 	}
 
 	// Wait for reply
-	dest := OutsDests[phone]
 	waitDur := 1 * time.Minute
 	final := ""
 	finished := false
@@ -108,7 +102,7 @@ func OutsExec(msg *events.Message, phone string, req *waE2E.Message) {
 	for !finished {
 		select {
 		case reply := <-dest.reply:
-			final, finished = OutsFilterReply(msg, reply)
+			final, finished = OutsFilterReply(msg, dest, reply)
 			if finished {
 				WaReplyText(msg, final)
 			}
@@ -120,12 +114,8 @@ func OutsExec(msg *events.Message, phone string, req *waE2E.Message) {
 	}
 }
 
-func OutsText(msg *events.Message, phone string) {
+func OutsText(msg *events.Message, dest OutsDest) {
 	waitDur := 1 * time.Minute
-	dest, ok := OutsDests[phone]
-	if !ok {
-		log.Error().Err(errors.New(phone)).Msg("INVALID OUTS")
-	}
 	if dest.WIP() {
 		WaReact(msg, "🐢")
 	}
@@ -138,25 +128,30 @@ func OutsText(msg *events.Message, phone string) {
 
 	query := WaMsgPrompt(msg)
 	req := waE2E.Message{Conversation: &query}
-	OutsExec(msg, phone, &req)
+	OutsExec(msg, dest, &req)
 }
 
-func OutsCheck(msg *events.Message) {
-	dest, ok := OutsDests[msg.Info.Sender.User]
-	if !ok {
+func OutsCapture(msg *events.Message) {
+	validDest := OutsDest{}
+	for _, dest := range OutsDests {
+		if strings.Contains(msg.Info.Sender.User, dest.rcv_phone) {
+			validDest = dest
+			break
+		}
+	}
+	if (validDest == OutsDest{}) {
 		return
 	}
-	if dest.WIP() {
-		dest.reply <- msg
+	if validDest.WIP() {
+		validDest.reply <- msg
 	}
 }
 
 func OutsCmdChk(msg *events.Message, cmd string) bool {
-	switch cmd {
-	case "!cai":
-		go OutsText(msg, OUTS_PHONE_CHATGPT)
-		return true
+	dest, ok := OutsDests[cmd]
+	if !ok {
+		return false
 	}
-
-	return false
+	go OutsText(msg, dest)
+	return true
 }
