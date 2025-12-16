@@ -25,7 +25,7 @@ const (
 
 // Generic chat reset
 func ChatReset[T any](msg *events.Message, history T) T {
-	WaText(msg, "No thoughts. Head's empty. 👍")
+	WaReplyText(msg, "No thoughts. Head's empty. 👍")
 	return lo.Empty[T]()
 }
 
@@ -76,7 +76,7 @@ func ChatGaiConvo(msg *events.Message) {
 		}
 	}
 
-	if GaiChat == nil || len(GaiChat.History(false)) >= CHAT_HISTORY_MAX_LEN || WaMsgQry(msg) == "/reset" {
+	if GaiChat == nil || len(GaiChat.History(false)) >= CHAT_HISTORY_MAX_LEN || WaMsgPrompt(msg) == "/reset" {
 		if GaiChat != nil && len(GaiChat.History(false)) >= CHAT_HISTORY_MAX_LEN {
 			WaReact(msg, "😵‍💫")
 		}
@@ -85,8 +85,8 @@ func ChatGaiConvo(msg *events.Message) {
 			WaSaadStr(msg, "GAI RESET: "+err.Error())
 			return
 		}
-		if WaMsgQry(msg) == "/reset" {
-			WaText(msg, "No thoughts. Head's empty. 👍")
+		if WaMsgPrompt(msg) == "/reset" {
+			WaReplyText(msg, "No thoughts. Head's empty. 👍")
 			return
 		}
 	}
@@ -101,11 +101,11 @@ func ChatGaiConvo(msg *events.Message) {
 	if qryMedia != nil {
 		r, err = GaiChat.SendMessage(context.Background(),
 			*genai.NewPartFromBytes(qryMedia, mime),
-			*genai.NewPartFromText(WaMsgQry(msg)),
+			*genai.NewPartFromText(WaMsgPrompt(msg)),
 		)
 	} else {
 		r, err = GaiChat.SendMessage(context.Background(),
-			*genai.NewPartFromText(WaMsgQry(msg)),
+			*genai.NewPartFromText(WaMsgPrompt(msg)),
 		)
 	}
 	if err != nil {
@@ -120,7 +120,7 @@ func ChatGaiConvo(msg *events.Message) {
 		}
 		if part.InlineData != nil && len(part.InlineData.Data) > 0 {
 			if strings.HasPrefix(part.InlineData.MIMEType, "image/") {
-				WaImage(msg, part.InlineData.Data, part.InlineData.DisplayName)
+				WaReplyImg(msg, part.InlineData.Data, part.InlineData.DisplayName)
 			} else {
 				WaSaadStr(msg, "GAI MIME IN: "+part.InlineData.MIMEType)
 			}
@@ -132,7 +132,7 @@ func ChatGaiConvo(msg *events.Message) {
 				return
 			}
 			if strings.HasPrefix(part.FileData.MIMEType, "image/") {
-				WaImage(msg, r.Body(), part.FileData.FileURI)
+				WaReplyImg(msg, r.Body(), part.FileData.FileURI)
 			} else {
 				WaSaadStr(msg, "GAI MIME FL: "+part.FileData.MIMEType)
 			}
@@ -140,7 +140,7 @@ func ChatGaiConvo(msg *events.Message) {
 	}
 
 	if len(res) > 0 {
-		WaText(msg, res)
+		WaReplyText(msg, res)
 	}
 }
 
@@ -180,7 +180,7 @@ func ChatKontext(msg *events.Message) {
 	}
 
 	reqbody.Img = base64.StdEncoding.EncodeToString(thumbbuf.Bytes())
-	reqbody.Prompt = WaMsgQry(msg)
+	reqbody.Prompt = WaMsgPrompt(msg)
 
 	r, err := HttpcBase().SetTimeout(KONTEXT_TIMEOUT).SetBasicAuth(ENV_BAUTH_SDAPI_USER, ENV_BAUTH_SDAPI_PASS).
 		R().SetBody(reqbody).Post(ENV_BASEURL_KONTEXT)
@@ -190,7 +190,7 @@ func ChatKontext(msg *events.Message) {
 	}
 	if r.StatusCode() != http.StatusOK {
 		if r.StatusCode() == http.StatusTooManyRequests {
-			WaText(msg, "MODAL ZERO")
+			WaReplyText(msg, "MODAL ZERO")
 			return
 		} else {
 			WaSaadStr(msg, "KONTEXT DED "+r.Status())
@@ -205,7 +205,7 @@ func ChatKontext(msg *events.Message) {
 	}
 	t_all := time.Since(t_start).Round(time.Second)
 	t_str := fmt.Sprintf("%s", t_all)
-	WaImage(msg, image, t_str)
+	WaReplyImg(msg, image, t_str)
 }
 
 func ChatCmdChk(msg *events.Message, cmd string) bool {
@@ -213,7 +213,7 @@ func ChatCmdChk(msg *events.Message, cmd string) bool {
 	case AdminDevDiff("!xai", "!ai"):
 		go ChatGaiConvo(msg)
 		return true
-	case AdminDevDiff("!i.flx", "!i.flx"):
+	case AdminDevDiff("!x.flx", "!m.flx"):
 		go ChatKontext(msg)
 		return true
 	}

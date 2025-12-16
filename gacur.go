@@ -30,7 +30,11 @@ func GachaTokke(msg *events.Message) {
 	hint := "Respond to user messages with two sentences at most. Be as memey as possible."
 	aians, err := ChatGaiOneText(WaMsgStr(msg), hint)
 	if err != nil {
-		WaSaad(msg, err)
+		if strings.Contains(err.Error(), "overload") {
+			WaReact(msg, "🤕")
+		} else {
+			WaSaad(msg, err)
+		}
 	}
 	log.Debug().Str("aians", aians).Msg("TOKKE")
 	if len(strings.Split(aians, ".")) > 2 {
@@ -41,11 +45,11 @@ func GachaTokke(msg *events.Message) {
 		SetBody(map[string]any{"text": aians, "safe": true, "redirect": true}).
 		Post(ENV_BASEURL_MEMEGEN)
 	if err != nil {
-		WaText(msg, aians)
+		WaReplyText(msg, aians)
 		return
 	}
 
-	WaImage(msg, r.Body(), "")
+	WaReplyImg(msg, r.Body(), "")
 }
 
 var CurHeheEnd time.Time
@@ -56,7 +60,7 @@ func CurHeheAct(msg *events.Message) {
 		return
 	}
 
-	WaText(msg, "h3h3 or heehee 👿")
+	WaReplyText(msg, "h3h3 or heehee 👿")
 	CurHeheEnd = time.Now().Add(7 * 24 * time.Hour)
 }
 
@@ -99,7 +103,7 @@ func CurTeheAct(msg *events.Message) {
 		WaSaad(msg, err)
 		return
 	}
-	WaVideo(msg, vid, "Kawaii 🤮", true)
+	WaReplyVid(msg, vid, "Kawaii 🤮", true)
 	CurTeheEnd = time.Now().Add(7 * 24 * time.Hour)
 }
 
@@ -154,14 +158,14 @@ func CurZeta(msg *events.Message) {
 				WaSaad(msg, err)
 				return
 			}
-			WaImage(msg, img, "You know what time is it?")
+			WaReplyImg(msg, img, "You know what time is it?")
 		case 2:
 			vid, err := os.ReadFile("assets/disco.mp4")
 			if err != nil {
 				WaSaad(msg, err)
 				return
 			}
-			WaVideo(msg, vid, "Zeta ter00s 🥵", true)
+			WaReplyVid(msg, vid, "Zeta ter00s 🥵", true)
 		}
 		return
 	}

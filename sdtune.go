@@ -80,7 +80,9 @@ var SdChars = map[string]SdChara{
 }
 
 var SdTurbo = SdEdge("MjMwIC0=", 0.7, 66)
-var SdFws = SdBox("MSc6JSLuKDvzMTs0NCLv8uY5Lis0NCcvJTMvOS4n8uYzNTgvMTs4JyUrNPLmNicyKyU5MS808tAIGAsHEQ==", 58)
+var SdFws = SdBox("+e8C7eq28AO7+QP8/Oq3uq4B9vP8/O/37fv3Afbvuq77/QD3+QMA7+3z/LquAfb3/AftAfn3/Lqu/u/68+0B+ff8uq6Y0ODTz9k=", 114)
+var SdFwa = SdBox("MjQ3LjA6NyYkKjPx5TgtLjM+JDgwLjPx5c8HFwoGEA==", 59)
+var SdSugar = SdBox("wwoM/vgJ9hAGDMM=", 105)
 
 func SdCube(base string, pow int) string {
 	enc := []byte(base)
@@ -112,16 +114,16 @@ func SdEdge(edge string, amp float32, pow int) string {
 }
 
 func SdTune(msg *events.Message) {
-	qry := WaMsgQry(msg)
+	qry := WaMsgPrompt(msg)
 	pow := int(lo.RandomString(1, lo.AllCharset)[0])
 	cube := SdCube(qry, pow)
-	WaText(msg, fmt.Sprintf("[%d] %s", pow, cube))
+	WaReplyText(msg, fmt.Sprintf("[%d] %s", pow, cube))
 }
 
 var SdBaker = 0
 
 func SdBake(msg *events.Message) {
-	qry := WaMsgQry(msg)
+	qry := WaMsgPrompt(msg)
 	baking, err := strconv.Atoi(qry)
 	if err != nil {
 		WaReact(msg, "❌")
@@ -132,7 +134,7 @@ func SdBake(msg *events.Message) {
 }
 
 func SdTake(msg *events.Message) {
-	qry := WaMsgQry(msg)
+	qry := WaMsgPrompt(msg)
 	box := SdBox(qry, SdBaker)
-	WaText(msg, box)
+	WaReplyText(msg, box)
 }

@@ -50,31 +50,30 @@ func (o OutsDest) Wait(t time.Duration) bool {
 	}
 }
 
+var (
+	OUTS_PHONE_CHATGPT = "30722505109681"
+)
+
+func IsOutsPhone(msg *events.Message) bool {
+	if msg.Info.Sender.User == OUTS_PHONE_CHATGPT {
+		return true
+	}
+	return false
+}
+
 var OutsDests = map[string]OutsDest{
-	"15854968266": OutsDestMake(), // Youbot
-	"18002428478": OutsDestMake(), // ChatGPT
+	OUTS_PHONE_CHATGPT: OutsDestMake(),
 }
 
 func OutsFilterReply(msg *events.Message, reply *events.Message) (string, bool) {
-	if strings.Contains(reply.Info.Sender.User, "15854968266") {
-		if strings.Contains(WaMsgStr(reply), "great to meet you!") {
-			WaReact(msg, "⏳")
-			return "", false
-		}
-		if strings.Contains(WaMsgStr(reply), "The answer does not rely on search results.") {
-			ans := strings.Split(WaMsgStr(reply), "The answer does not rely on search results.")[0]
-			ans = strings.TrimRight(ans, " \n_")
-			return ans, true
-		}
-		return WaMsgStr(reply), true
-	} else if strings.Contains(reply.Info.Sender.User, "18002428478") {
-		dest := OutsDests["18002428478"]
+	if strings.Contains(reply.Info.Sender.User, OUTS_PHONE_CHATGPT) {
+		dest := OutsDests[OUTS_PHONE_CHATGPT]
 		*dest.textBuffer = WaMsgStr(reply)
 
 		finished := false
 		for !finished {
 			select {
-			case <-time.After(10 * time.Second):
+			case <-time.After(3 * time.Second):
 				finished = true
 			case reply = <-dest.reply:
 				text := fmt.Sprintln(*dest.textBuffer, WaMsgStr(reply))
@@ -83,7 +82,7 @@ func OutsFilterReply(msg *events.Message, reply *events.Message) (string, bool) 
 		}
 
 		go func() {
-			time.Sleep(10 * time.Second)
+			time.Sleep(3 * time.Second)
 			*dest.textBuffer = ""
 		}()
 		return *dest.textBuffer, true
@@ -111,11 +110,11 @@ func OutsExec(msg *events.Message, phone string, req *waE2E.Message) {
 		case reply := <-dest.reply:
 			final, finished = OutsFilterReply(msg, reply)
 			if finished {
-				WaText(msg, final)
+				WaReplyText(msg, final)
 			}
 
 		case <-time.After(waitDur):
-			WaSaad(msg, WaFallen)
+			WaSaad(msg, WaSaadFallen)
 			return
 		}
 	}
@@ -131,13 +130,13 @@ func OutsText(msg *events.Message, phone string) {
 		WaReact(msg, "🐢")
 	}
 	if !dest.Wait(waitDur) {
-		WaSaad(msg, WaFallen)
+		WaSaad(msg, WaSaadFallen)
 		return
 	}
 	dest.Lock()
 	defer dest.Unlock()
 
-	query := WaMsgQry(msg)
+	query := WaMsgPrompt(msg)
 	req := waE2E.Message{Conversation: &query}
 	OutsExec(msg, phone, &req)
 }
@@ -154,11 +153,8 @@ func OutsCheck(msg *events.Message) {
 
 func OutsCmdChk(msg *events.Message, cmd string) bool {
 	switch cmd {
-	case "!yai":
-		go OutsText(msg, "15854968266")
-		return true
 	case "!cai":
-		go OutsText(msg, "18002428478")
+		go OutsText(msg, OUTS_PHONE_CHATGPT)
 		return true
 	}
 

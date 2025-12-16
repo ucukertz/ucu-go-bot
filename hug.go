@@ -19,26 +19,18 @@ type hugmodel struct {
 	postpos string
 }
 
-var hugs = map[string]hugmodel{
-	"!img":    {"stabilityai/stable-diffusion-xl-base-1.0", ""},
-	"!i.sxl":  {"stabilityai/stable-diffusion-xl-base-1.0", ""},
-	"!i.std":  {"stabilityai/stable-diffusion-2-1", ""},
-	"!i.some": {"NoCrypt/SomethingV2_2", "masterpiece, best quality, ultra-detailed"},
-	"!i.cntr": {"gsdf/Counterfeit-V2.5", "masterpiece, best quality, ultra-detailed"},
-	"!i.modi": {"nitrosocke/mo-di-diffusion", "modern disney style"},
-	"!i.prot": {"darkstorm2150/Protogen_x3.4_Official_Release", "modelshoot style, analog style, mdjrny-v4 style"},
-	"!i.pix":  {"nerijs/pixel-art-xl", ""},
-	"!i.logo": {"artificialguybr/LogoRedmond-LogoLoraForSDXL-V2", "LogoRedmAF"},
-	"!i.mid":  {"prompthero/openjourney", "mdjrny-v4 style"},
+var HugLgc = map[string]hugmodel{
+	"!img":   {"stabilityai/stable-diffusion-xl-base-1.0", ""},
+	"!l.sxl": {"stabilityai/stable-diffusion-xl-base-1.0", ""},
 }
 
-func Hug(msg *events.Message, model string, query string, attempt int) ([]byte, error) {
+func HugLegacy(msg *events.Message, model string, query string, attempt int) ([]byte, error) {
 	r, err := HttpcBase().
 		SetBaseURL(ENV_BASEURL_HUGGINGFACE).
 		SetAuthToken(ENV_TOKEN_HUGGING).
 		SetTimeout(HUG_RETRY_SEC).
-		R().SetBody(map[string]any{"inputs": fmt.Sprint(query, ",", hugs[model].postpos, lo.RandomString(6, lo.NumbersCharset))}).
-		Post(hugs[model].url)
+		R().SetBody(map[string]any{"inputs": fmt.Sprint(query, ",", HugLgc[model].postpos, lo.RandomString(6, lo.NumbersCharset))}).
+		Post(HugLgc[model].url)
 
 	if err != nil || r.StatusCode() != http.StatusOK {
 		if attempt == 0 {
@@ -54,12 +46,12 @@ func Hug(msg *events.Message, model string, query string, attempt int) ([]byte, 
 	return r.Body(), nil
 }
 
-func Hugging(msg *events.Message, model string, query string) {
+func HuggingLegacy(msg *events.Message, model string, query string) {
 	attempt := 0
 	img := []byte{}
 	err := fmt.Errorf("HUG ERRINIT")
 	for attempt < HUG_MAX_ATTEMPT && err != nil {
-		img, err = Hug(msg, model, query, 0)
+		img, err = HugLegacy(msg, model, query, 0)
 		attempt++
 	}
 
@@ -67,14 +59,14 @@ func Hugging(msg *events.Message, model string, query string) {
 		WaSaad(msg, err)
 		return
 	}
-	WaImage(msg, img, "")
+	WaReplyImg(msg, img, "")
 }
 
-func HugCmdChk(msg *events.Message, cmd string) bool {
-	if _, ok := hugs[cmd]; !ok {
+func HugLegacyCmdChk(msg *events.Message, cmd string) bool {
+	if _, ok := HugLgc[cmd]; !ok {
 		return false
 	}
 
-	go Hugging(msg, cmd, WaMsgQry(msg))
+	go HuggingLegacy(msg, cmd, WaMsgPrompt(msg))
 	return true
 }

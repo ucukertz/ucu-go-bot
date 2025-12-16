@@ -18,6 +18,7 @@ import (
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store/sqlstore"
+	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 )
@@ -26,9 +27,21 @@ var syncing = true
 var synctime = time.Now()
 var meow *whatsmeow.Client
 
-var WaFallen = fmt.Errorf("The request has fallen. Megabytes must free.")
+var WaSaadFallen = fmt.Errorf("The request has fallen. Megabytes must free.")
 
-func WaText(msg *events.Message, text string) {
+func WaSendText(chat types.JID, text string) {
+	rmsg := waE2E.Message{
+		Conversation: &text,
+	}
+	_, err := meow.SendMessage(context.Background(), chat, &rmsg)
+	if err != nil {
+		log.Error().Err(err).Msg("WA TEXT")
+	} else {
+		log.Debug().Msg("WA TEXT OK")
+	}
+}
+
+func WaReplyText(msg *events.Message, text string) {
 	participant := msg.Info.MessageSource.Sender.String()
 	xmsg := waE2E.Message{
 		ExtendedTextMessage: &waE2E.ExtendedTextMessage{
@@ -42,22 +55,14 @@ func WaText(msg *events.Message, text string) {
 	}
 	_, err := meow.SendMessage(context.Background(), msg.Info.Chat, &xmsg)
 	if err != nil {
-		log.Error().Err(err).Msg("TEXT")
+		log.Error().Err(err).Msg("WA TEXT REPLY")
 	} else {
-		log.Debug().Msg("TEXT OK")
+		log.Debug().Msg("WA TEXT REPLY OK")
 		return
 	}
 
 	// Fallback to regular send
-	rmsg := waE2E.Message{
-		Conversation: &text,
-	}
-	_, err = meow.SendMessage(context.Background(), msg.Info.Chat, &rmsg)
-	if err != nil {
-		log.Error().Err(err).Msg("TEXT FB")
-	} else {
-		log.Debug().Msg("TEXT FB OK")
-	}
+	WaSendText(msg.Info.Chat, text)
 }
 
 func WaByte2ImgImg(b []byte) (image.Image, error) {
@@ -76,64 +81,130 @@ func WaByte2ImgImg(b []byte) (image.Image, error) {
 	return nil, fmt.Errorf("unsupported image format")
 }
 
-func WaImage(msg *events.Message, img []byte, caption string) {
+type WaUploadedBytes struct {
+	mime string
+	upr  whatsmeow.UploadResponse
+}
+
+type WaUploadedImage struct {
+	upb      WaUploadedBytes
+	thumb    []byte
+	thumbupr whatsmeow.UploadResponse
+}
+
+func WaImageUpload(img []byte) (WaUploadedImage, error) {
 	mime := http.DetectContentType(img)
 	upr, err := meow.Upload(context.Background(), img, whatsmeow.MediaImage)
 	if err != nil {
-		log.Error().Err(err).Msg("IMGUP")
-		WaReact(msg, "😢")
-		return
+		return WaUploadedImage{}, fmt.Errorf("IMGUP: %w", err)
 	}
 
 	// Create thumbnail
 	imgimg, err := WaByte2ImgImg(img)
 	if err != nil {
-		log.Error().Err(err).Msg("IMGCONV")
-		return
+		return WaUploadedImage{}, fmt.Errorf("IMGCONV: %w", err)
 	}
+
 	thumbimgimg := resize.Thumbnail(72, 72, imgimg, resize.Lanczos3)
 	thumbbuf := new(bytes.Buffer)
 	err = jpeg.Encode(thumbbuf, thumbimgimg, &jpeg.Options{Quality: 80})
 	if err != nil {
-		log.Error().Err(err).Msg("IMGTHUMBENC")
-		return
+		return WaUploadedImage{}, fmt.Errorf("IMGTHUMBENC: %w", err)
 	}
 	thumb := thumbbuf.Bytes()
 	thumbupr, err := meow.Upload(context.Background(), thumb, whatsmeow.MediaImage)
 	if err != nil {
-		log.Error().Err(err).Msg("IMGTHUMBUP")
-		return
+		return WaUploadedImage{}, fmt.Errorf("IMGTHUMBUP: %w", err)
 	}
 
-	// Reply with image
-	participant := msg.Info.MessageSource.Sender.String()
-	ximsg := waE2E.ImageMessage{
-		Caption:  &caption,
-		Mimetype: &mime,
+	OkUpload := WaUploadedImage{
+		upb: WaUploadedBytes{
+			mime: mime,
+			upr:  upr,
+		},
+		thumb:    thumb,
+		thumbupr: thumbupr,
+	}
 
-		URL:           &upr.URL,
-		DirectPath:    &upr.DirectPath,
-		MediaKey:      upr.MediaKey,
-		FileEncSHA256: upr.FileEncSHA256,
-		FileSHA256:    upr.FileSHA256,
-		FileLength:    &upr.FileLength,
+	return OkUpload, nil
+}
 
-		JPEGThumbnail:       thumb,
-		ThumbnailDirectPath: &thumbupr.DirectPath,
-		ThumbnailEncSHA256:  thumbupr.FileEncSHA256,
-		ThumbnailSHA256:     thumbupr.FileSHA256,
+func WaImageBuildE2e(isReply bool, upi WaUploadedImage, caption string, msg *events.Message) (*waE2E.Message, error) {
+	if isReply && msg == nil {
+		return nil, fmt.Errorf("no message to reply to")
+	}
 
-		ContextInfo: &waE2E.ContextInfo{
+	res := upi.upb.upr
+	thumbRes := upi.thumbupr
+	imsg := &waE2E.ImageMessage{
+		Caption:             &caption,
+		Mimetype:            &upi.upb.mime,
+		URL:                 &res.URL,
+		DirectPath:          &res.DirectPath,
+		MediaKey:            res.MediaKey,
+		FileEncSHA256:       res.FileEncSHA256,
+		FileSHA256:          res.FileSHA256,
+		FileLength:          &res.FileLength,
+		JPEGThumbnail:       upi.thumb,
+		ThumbnailDirectPath: &thumbRes.DirectPath,
+		ThumbnailEncSHA256:  thumbRes.FileEncSHA256,
+		ThumbnailSHA256:     thumbRes.FileSHA256,
+	}
+
+	if isReply {
+		participant := msg.Info.MessageSource.Sender.String()
+		imsg.ContextInfo = &waE2E.ContextInfo{
 			StanzaID:      &msg.Info.ID,
 			Participant:   &participant,
 			QuotedMessage: msg.Message,
-		},
+		}
 	}
 
-	xmsg := waE2E.Message{
-		ImageMessage: &ximsg,
+	return &waE2E.Message{
+		ImageMessage: imsg,
+	}, nil
+}
+
+func WaSendImg(chat types.JID, img []byte, caption string) {
+	up, err := WaImageUpload(img)
+	if err != nil {
+		log.Error().Err(err).Msg("IMG")
+		return
 	}
-	_, err = meow.SendMessage(context.Background(), msg.Info.Chat, &xmsg)
+
+	WaSendImgUp(chat, up, caption)
+}
+
+func WaSendImgUp(chat types.JID, upi WaUploadedImage, caption string) {
+	e2e, err := WaImageBuildE2e(false, upi, caption, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("IMG BUILD")
+		return
+	}
+
+	_, err = meow.SendMessage(context.Background(), chat, e2e)
+	if err != nil {
+		log.Error().Err(err).Msg("WA IMG")
+	} else {
+		log.Debug().Msg("WA IMG OK")
+		return
+	}
+}
+
+func WaReplyImg(msg *events.Message, img []byte, caption string) {
+	up, err := WaImageUpload(img)
+	if err != nil {
+		log.Error().Err(err).Msg("IMG")
+		WaReact(msg, "😢")
+		return
+	}
+
+	e2e, err := WaImageBuildE2e(true, up, caption, msg)
+	if err != nil {
+		log.Error().Err(err).Msg("IMG BUILD")
+		return
+	}
+	_, err = meow.SendMessage(context.Background(), msg.Info.Chat, e2e)
 	if err != nil {
 		log.Error().Err(err).Msg("IMG")
 	} else {
@@ -142,36 +213,71 @@ func WaImage(msg *events.Message, img []byte, caption string) {
 	}
 
 	// Fallback to regular send
-	rimsg := waE2E.ImageMessage{
-		Caption:  &caption,
-		Mimetype: &mime,
+	WaSendImgUp(msg.Info.Chat, up, caption)
+}
 
-		URL:           &upr.URL,
-		DirectPath:    &upr.DirectPath,
-		MediaKey:      upr.MediaKey,
-		FileEncSHA256: upr.FileEncSHA256,
-		FileSHA256:    upr.FileSHA256,
-		FileLength:    &upr.FileLength,
-
-		JPEGThumbnail:       thumb,
-		ThumbnailDirectPath: &thumbupr.DirectPath,
-		ThumbnailEncSHA256:  thumbupr.FileEncSHA256,
-		ThumbnailSHA256:     thumbupr.FileSHA256,
+func WaBuildVidE2e(isReply bool, upb WaUploadedBytes, msg *events.Message, caption string, gif bool) (*waE2E.Message, error) {
+	if isReply && msg == nil {
+		return nil, fmt.Errorf("no message to reply to")
 	}
 
-	rmsg := waE2E.Message{
-		ImageMessage: &rimsg,
+	res := upb.upr
+	vmsg := &waE2E.VideoMessage{
+		Caption:       &caption,
+		Mimetype:      &upb.mime,
+		URL:           &res.URL,
+		DirectPath:    &res.DirectPath,
+		MediaKey:      res.MediaKey,
+		FileEncSHA256: res.FileEncSHA256,
+		FileSHA256:    res.FileSHA256,
+		FileLength:    &res.FileLength,
+		GifPlayback:   &gif,
 	}
-	_, err = meow.SendMessage(context.Background(), msg.Info.Chat, &rmsg)
+
+	if isReply {
+		participant := msg.Info.MessageSource.Sender.String()
+		vmsg.ContextInfo = &waE2E.ContextInfo{
+			StanzaID:      &msg.Info.ID,
+			Participant:   &participant,
+			QuotedMessage: msg.Message,
+		}
+	}
+
+	return &waE2E.Message{
+		VideoMessage: vmsg,
+	}, nil
+}
+
+func WaSendVid(chat types.JID, video []byte, caption string, gif bool) {
+	upr, err := meow.Upload(context.Background(), video, whatsmeow.MediaVideo)
 	if err != nil {
-		log.Error().Err(err).Msg("IMG FB")
-	} else {
-		log.Debug().Msg("IMG FB OK")
+		log.Error().Err(err).Msg("VID")
 		return
+	}
+	mime := http.DetectContentType(video)
+	upb := WaUploadedBytes{
+		mime: mime,
+		upr:  upr,
+	}
+	WaSendVidUp(chat, upb, caption, gif)
+}
+
+func WaSendVidUp(chat types.JID, upb WaUploadedBytes, caption string, gif bool) {
+	e2e, err := WaBuildVidE2e(false, upb, nil, caption, gif)
+	if err != nil {
+		log.Error().Err(err).Msg("VID BUILD")
+		return
+	}
+
+	_, err = meow.SendMessage(context.Background(), chat, e2e)
+	if err != nil {
+		log.Error().Err(err).Msg("VID")
+	} else {
+		log.Debug().Msg("VID OK")
 	}
 }
 
-func WaVideo(msg *events.Message, video []byte, caption string, gif bool) {
+func WaReplyVid(msg *events.Message, video []byte, caption string, gif bool) {
 	upr, err := meow.Upload(context.Background(), video, whatsmeow.MediaVideo)
 	if err != nil {
 		log.Error().Err(err).Msg("VID")
@@ -180,30 +286,18 @@ func WaVideo(msg *events.Message, video []byte, caption string, gif bool) {
 	}
 
 	mime := http.DetectContentType(video)
-	participant := msg.Info.MessageSource.Sender.String()
-	xvmsg := waE2E.VideoMessage{
-		Caption:  &caption,
-		Mimetype: &mime,
-
-		URL:           &upr.URL,
-		DirectPath:    &upr.DirectPath,
-		MediaKey:      upr.MediaKey,
-		FileEncSHA256: upr.FileEncSHA256,
-		FileSHA256:    upr.FileSHA256,
-		FileLength:    &upr.FileLength,
-		GifPlayback:   &gif,
-
-		ContextInfo: &waE2E.ContextInfo{
-			StanzaID:      &msg.Info.ID,
-			Participant:   &participant,
-			QuotedMessage: msg.Message,
-		},
+	upb := WaUploadedBytes{
+		mime: mime,
+		upr:  upr,
 	}
 
-	xmsg := waE2E.Message{
-		VideoMessage: &xvmsg,
+	e2e, err := WaBuildVidE2e(true, upb, msg, caption, gif)
+	if err != nil {
+		log.Error().Err(err).Msg("VID BUILD")
+		return
 	}
-	_, err = meow.SendMessage(context.Background(), msg.Info.Chat, &xmsg)
+
+	_, err = meow.SendMessage(context.Background(), msg.Info.Chat, e2e)
 	if err != nil {
 		log.Error().Err(err).Msg("VID")
 	} else {
@@ -211,24 +305,8 @@ func WaVideo(msg *events.Message, video []byte, caption string, gif bool) {
 		return
 	}
 
-	rivmsg := waE2E.VideoMessage{
-		URL:           &upr.URL,
-		Mimetype:      &mime,
-		FileEncSHA256: upr.FileEncSHA256,
-		FileSHA256:    upr.FileSHA256,
-		FileLength:    &upr.FileLength,
-	}
-
-	rmsg := waE2E.Message{
-		VideoMessage: &rivmsg,
-	}
-	_, err = meow.SendMessage(context.Background(), msg.Info.Chat, &rmsg)
-	if err != nil {
-		log.Error().Err(err).Msg("VID FB")
-	} else {
-		log.Debug().Msg("VID FB OK")
-		return
-	}
+	// Fallback to regular send
+	WaSendVidUp(msg.Info.Chat, upb, caption, gif)
 }
 
 func WaReact(msg *events.Message, emoji string) {
@@ -245,7 +323,7 @@ func WaReact(msg *events.Message, emoji string) {
 
 func WaSaad(msg *events.Message, err error) {
 	saad := fmt.Sprint("Saad. Bot errored. -> ", err)
-	WaText(msg, saad)
+	WaReplyText(msg, saad)
 }
 
 func WaSaadStr(msg *events.Message, sad string) {
@@ -280,12 +358,12 @@ func WaMsgStr(msg *events.Message) string {
 	return ""
 }
 
-func WaMsgQry(msg *events.Message) string {
+func WaMsgPrompt(msg *events.Message) string {
 	split := strings.Split(WaMsgStr(msg), " ")[1:]
 	return strings.Join(split, " ")
 }
 
-func WaMsgMediaE2E(e2e *waE2E.Message) []byte {
+func WaE2eMedia(e2e *waE2E.Message) []byte {
 	if img := e2e.GetImageMessage(); img != nil {
 		res, err := meow.Download(context.Background(), img)
 		if err != nil {
@@ -319,7 +397,7 @@ func WaMsgMediaE2E(e2e *waE2E.Message) []byte {
 
 func WaMsgMedia(msg *events.Message) []byte {
 	e2e := msg.Message
-	return WaMsgMediaE2E(e2e)
+	return WaE2eMedia(e2e)
 }
 
 func WaMsgMediaQuoted(msg *events.Message) []byte {
@@ -331,7 +409,7 @@ func WaMsgMediaQuoted(msg *events.Message) []byte {
 		return nil
 	}
 
-	return WaMsgMediaE2E(quoted)
+	return WaE2eMedia(quoted)
 }
 
 func cmdHandler(msg *events.Message) {
@@ -339,7 +417,7 @@ func cmdHandler(msg *events.Message) {
 
 	if ok := SdCmdChk(msg, cmd); ok {
 		return
-	} else if ok := HugCmdChk(msg, cmd); ok {
+	} else if ok := HugLegacyCmdChk(msg, cmd); ok {
 		return
 	} else if ok := ChatCmdChk(msg, cmd); ok {
 		return
@@ -370,13 +448,13 @@ func eventHandler(evt any) {
 		if v.Info.IsFromMe {
 			return
 		}
-		if ENV_DEV_MODE == "1" && !strings.Contains(WaMsgUser(v), "234") {
+		if ENV_DEV_MODE == "1" && !IsAdmin(v) && !IsOutsPhone(v) {
 			log.Info().Str("user", WaMsgUser(v)).Msg("DEV MODE: Skipping message from user")
 			return
 		}
 
 		msgstr := WaMsgStr(v)
-		log.Debug().Str("msg", msgstr).Msg("Received a message!")
+		log.Debug().Str("from", v.Info.Sender.User).Str("msg", msgstr).Msg("Received a message!")
 
 		if len(WaMsgStr(v)) > 0 {
 			Gacur(v)

@@ -57,15 +57,15 @@ func (ckpt *SdCkpt) AddPrompt(prepos string, postpos string, preneg string, post
 }
 
 var xbpostpos_default = "BREAK vibrant_colors, colorful, masterpiece, best quality, amazing quality, very aesthetic, absurdres, newest, "
-var xbpostneg_default = fmt.Sprintln("chibi, bald, bad anatomy, poorly drawn, deformed anatomy, deformed fingers, censored, mosaic_censoring, bar_censor, shota, white_pupils, empty_eyes, multicolored_hair,",
+var xbpostneg_default = fmt.Sprintln("zombie, chibi, bald, bad anatomy, poorly drawn, deformed anatomy, deformed fingers, censored, mosaic_censoring, bar_censor, shota, white_pupils, empty_eyes, multicolored_hair," +
 	"BREAK lowres, (bad quality, worst quality:1.2), sketch, jpeg artifacts, censor, blurry, watermark, ")
 
 var SdCkpts = map[string]SdCkpt{
-	"!i.wai": *new(SdCkpt).Create("wai").Sampling("", "", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
-	"!i.mei": *new(SdCkpt).Create("mei").Sampling("", "", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
-	"!i.fwa": *new(SdCkpt).Create("fuwa").Sampling("", "", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
-	"!i.fwt": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt("", xbpostpos_default+SdTurbo, "", xbpostneg_default),
-	"!i.fws": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt(SdFws, xbpostpos_default+SdTurbo, "", xbpostneg_default),
+	"!m.wai": *new(SdCkpt).Create("wai").Sampling("", "", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
+	"!m.mei": *new(SdCkpt).Create("mei").Sampling("", "", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
+	"!m.fwt": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt("", xbpostpos_default+SdTurbo, "", xbpostneg_default),
+	"!m.fws": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt(SdFws, xbpostpos_default+SdTurbo, "", xbpostneg_default),
+	"!m.fwa": *new(SdCkpt).Create("fuwa").Sampling("", "", 0, 0).AddPrompt(SdFwa, SdSugar+xbpostpos_default, "", xbpostneg_default),
 }
 
 func SdApi(msg *events.Message, cmd string) {
@@ -87,7 +87,7 @@ func SdApi(msg *events.Message, cmd string) {
 			WaSaad(msg, err)
 			return
 		}
-		WaImage(msg, img, "")
+		WaReplyImg(msg, img, "")
 		return
 	}
 
@@ -104,9 +104,10 @@ func SdApi(msg *events.Message, cmd string) {
 	}()
 
 	prompt := new(SdPrompt)
-	prompt.prepos = WaMsgQry(msg)
+	prompt.prepos = WaMsgPrompt(msg)
 	prompt.prepos = strings.ReplaceAll(prompt.prepos, "\n", " ")
 	prompt.prepos = strings.ToLower(prompt.prepos)
+	prompt.prepos = strings.ReplaceAll(prompt.prepos, "break", "BREAK")
 
 	// Handle tuning
 	for _, chara := range lo.Keys(SdChars) {
@@ -169,7 +170,7 @@ func SdApi(msg *events.Message, cmd string) {
 			attempt++
 		} else if r.StatusCode() != http.StatusOK {
 			if r.StatusCode() == http.StatusTooManyRequests {
-				WaText(msg, "MODAL ZERO")
+				WaReplyText(msg, "MODAL RAN OUT!")
 				return
 			}
 
@@ -231,7 +232,7 @@ func SdApi(msg *events.Message, cmd string) {
 				t_gen := t_all - t_cold
 
 				caption := fmt.Sprintf("%s | G %s | C %s\n%d", t_all, t_gen, t_cold, seed)
-				WaImage(msg, image, caption)
+				WaReplyImg(msg, image, caption)
 			}
 			return
 		}
@@ -265,7 +266,7 @@ var SdDefaultUcfg = SdUcfg{Bluff: false, Reso: SdResos["sq"], Seed: -1}
 
 func SdSetUcfg(msg *events.Message, user string, uconfig SdUcfg) {
 	if _, ok := SdActiveUcfg[user]; !ok {
-		WaText(msg, "Hi, user "+msg.Info.Sender.User+"!")
+		WaReplyText(msg, "Hi, user "+msg.Info.Sender.User+"!")
 	}
 	SdActiveUcfg[user] = uconfig
 }
@@ -280,24 +281,24 @@ func SdCmdChk(msg *events.Message, cmd string) bool {
 	ucfg := lo.ValueOr(SdActiveUcfg, user, SdDefaultUcfg)
 
 	switch cmd {
-	case "!i.reso":
-		if reso, ok := SdResos[WaMsgQry(msg)]; ok {
+	case "!reso":
+		if reso, ok := SdResos[WaMsgPrompt(msg)]; ok {
 
 			ucfg.Reso = reso
 			SdSetUcfg(msg, user, ucfg)
-			WaText(msg, fmt.Sprintf("A1111 resolution set to %s for you 🫶", reso.name))
+			WaReplyText(msg, fmt.Sprintf("A1111 resolution set to %s for you 🫶", reso.name))
 		} else {
-			WaText(msg, "Resolution not found. Choices: \nsq, h1, h2, h3, w1, w2, w3\n\nExample: `!i.reso sq`")
+			WaReplyText(msg, "Resolution not found. Choices: \nsq, h1, h2, h3, w1, w2, w3\n\nExample: `!reso sq`")
 		}
 		return true
-	case "!i.bluff":
+	case "!bluff":
 		ucfg.Bluff = true
 		SdSetUcfg(msg, user, ucfg)
 		WaReact(msg, "😏")
 		return true
-	case "!i.seed":
+	case "!seed":
 		var seed int64 = ucfg.Seed
-		qry := WaMsgQry(msg)
+		qry := WaMsgPrompt(msg)
 		if parsed, err := strconv.ParseInt(qry, 10, 64); err == nil {
 			seed = parsed
 			WaReact(msg, "🔒")
@@ -310,15 +311,6 @@ func SdCmdChk(msg *events.Message, cmd string) bool {
 		}
 		ucfg.Seed = seed
 		SdSetUcfg(msg, user, ucfg)
-		return true
-	case "!s.tune":
-		go SdTune(msg)
-		return true
-	case "!s.bake":
-		go SdBake(msg)
-		return true
-	case "!s.take":
-		go SdTake(msg)
 		return true
 	}
 
