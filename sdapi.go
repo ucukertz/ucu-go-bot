@@ -170,7 +170,7 @@ func SdApi(msg *events.Message, cmd string) {
 			attempt++
 		} else if r.StatusCode() != http.StatusOK {
 			if r.StatusCode() == http.StatusTooManyRequests {
-				WaReplyText(msg, "MODAL RAN OUT!")
+				WaReact(msg, "💸")
 				return
 			}
 

@@ -35,6 +35,7 @@ func GachaTokke(msg *events.Message) {
 		} else {
 			WaSaad(msg, err)
 		}
+		return
 	}
 	log.Debug().Str("aians", aians).Msg("TOKKE")
 	if len(strings.Split(aians, ".")) > 2 {

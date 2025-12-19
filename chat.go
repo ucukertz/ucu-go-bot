@@ -109,7 +109,11 @@ func ChatGaiConvo(msg *events.Message) {
 		)
 	}
 	if err != nil {
-		WaSaadStr(msg, "GAI SEND: "+err.Error())
+		if strings.Contains(err.Error(), "overload") {
+			WaReact(msg, "🤕")
+		} else {
+			WaSaadStr(msg, "GAI SEND: "+err.Error())
+		}
 		return
 	}
 
@@ -190,7 +194,7 @@ func ChatKontext(msg *events.Message) {
 	}
 	if r.StatusCode() != http.StatusOK {
 		if r.StatusCode() == http.StatusTooManyRequests {
-			WaReplyText(msg, "MODAL ZERO")
+			WaReact(msg, "💸")
 			return
 		} else {
 			WaSaadStr(msg, "KONTEXT DED "+r.Status())
