@@ -113,7 +113,7 @@ func WaImageUpload(img []byte) (WaUploadedImage, error) {
 
 	thumbimgimg := resize.Thumbnail(72, 72, imgimg, resize.Lanczos3)
 	thumbbuf := new(bytes.Buffer)
-	err = png.Encode(thumbbuf, thumbimgimg)
+	err = jpeg.Encode(thumbbuf, thumbimgimg, &jpeg.Options{Quality: 100})
 	if err != nil {
 		return WaUploadedImage{}, fmt.Errorf("IMGTHUMBENC: %w", err)
 	}

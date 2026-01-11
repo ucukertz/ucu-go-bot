@@ -38,7 +38,7 @@ func HugZit(msg *events.Message) {
 	}
 
 	t_all := time.Since(t_start).Round(time.Second)
-	dur := fmt.Sprintf("%s\n", t_all)
+	dur := fmt.Sprintf("%s", t_all)
 	WaReplyImg(msg, img, dur)
 }
 
