@@ -99,18 +99,23 @@ type WaUploadedImage struct {
 }
 
 func WaImageUpload(img []byte) (WaUploadedImage, error) {
-	mime := http.DetectContentType(img)
-	upr, err := meow.Upload(context.Background(), img, whatsmeow.MediaImage)
-	if err != nil {
-		return WaUploadedImage{}, fmt.Errorf("IMGUP: %w", err)
-	}
-
-	// Create thumbnail
 	imgimg, err := WaByte2ImgImg(img)
 	if err != nil {
 		return WaUploadedImage{}, fmt.Errorf("IMGCONV: %w", err)
 	}
 
+	mime := "image/png"
+	imgbuf := new(bytes.Buffer)
+	err = png.Encode(imgbuf, imgimg)
+	if err != nil {
+		return WaUploadedImage{}, fmt.Errorf("IMGENC: %w", err)
+	}
+	upr, err := meow.Upload(context.Background(), imgbuf.Bytes(), whatsmeow.MediaImage)
+	if err != nil {
+		return WaUploadedImage{}, fmt.Errorf("IMGUP: %w", err)
+	}
+
+	// Create thumbnail
 	thumbimgimg := resize.Thumbnail(72, 72, imgimg, resize.Lanczos3)
 	thumbbuf := new(bytes.Buffer)
 	err = jpeg.Encode(thumbbuf, thumbimgimg, &jpeg.Options{Quality: 100})
