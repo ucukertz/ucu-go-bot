@@ -1,21 +1,23 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"image/png"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/nfnt/resize"
 	"github.com/samber/lo"
 	"go.mau.fi/whatsmeow/types/events"
 )
 
 const (
-	SDAPI_TIMEOUT     = 60 * time.Second
+	SDAPI_TIMEOUT     = 240 * time.Second
 	SDAPI_MAX_ATTEMPT = 10
 )
 
@@ -69,13 +71,11 @@ var SdCkpts = map[string]SdCkpt{
 }
 
 func SdApi(msg *events.Message, cmd string) {
-	user := WaMsgUser(msg)
-	ucfg := lo.ValueOr(SdActiveUcfg, user, SdDefaultUcfg)
+	ucfg := GenGet(msg)
 
 	bluff := ucfg.Bluff
 	if bluff {
-		ucfg.Bluff = false
-		SdSetUcfg(msg, user, ucfg)
+		GenSetBluff(msg, false)
 
 		sec := GachaRand64(30, 50)
 		time.Sleep(time.Duration(sec) * time.Second)
@@ -103,6 +103,190 @@ func SdApi(msg *events.Message, cmd string) {
 		log.Info().Str("took", fmt.Sprintf("%s", time.Since(t_start).Round(time.Second))).Msg("SD END")
 	}()
 
+	pos, neg := SdProcessPrompt(msg, ckpt)
+	ready := SdWarmup(msg)
+	if !ready {
+		return
+	}
+
+	t_cold := time.Since(t_start).Round(time.Second)
+
+	WaReact(msg, "⏳")
+	if !strings.Contains(ucfg.Reso.name, "SDXL") {
+		println("Non-SDXL resolution used:", ucfg.Reso.name)
+		WaReplyText(msg, "Not using standard SDXL resolution. Image quality may be affected.")
+	}
+	log.Info().Msg("[SD POSITIVE] " + pos)
+	log.Info().Msg("[SD NEGATIVE] " + neg)
+
+	// Start generation
+	attempt := 0
+	SdHttpc := HttpcBase().SetBaseURL(ENV_BASEURL_SDAPI).SetBasicAuth(ENV_BAUTH_SDAPI_USER, ENV_BAUTH_SDAPI_PASS).SetTimeout(SDAPI_TIMEOUT)
+	seed := lo.If(ucfg.Seed != -1, ucfg.Seed).Else(GachaRand64(1e9, 9e9))
+	for {
+		if attempt > SDAPI_MAX_ATTEMPT {
+			WaSaadStr(msg, "SD CANNOT REAL GEN")
+			return
+		}
+		body := map[string]any{
+			"prompt":            pos,
+			"negative_prompt":   neg,
+			"sampler_name":      ckpt.sampler,
+			"scheduler":         ckpt.scheduler,
+			"steps":             ckpt.n_sample,
+			"cfg_scale":         ckpt.cfg_scale,
+			"width":             ucfg.Reso.Width,
+			"height":            ucfg.Reso.Height,
+			"seed":              seed,
+			"override_settings": map[string]any{"sd_model_checkpoint": ckpt.name, "CLIP_stop_at_last_layers": 2},
+		}
+		r, err := SdHttpc.R().SetBody(body).Post("/sdapi/v1/txt2img")
+		if err != nil {
+			attempt++
+		} else if r.StatusCode() != http.StatusOK {
+			attempt++
+		} else if r.StatusCode() == http.StatusOK {
+			type SdImages struct {
+				Images []string `json:"images"`
+			}
+
+			var res SdImages
+			err = json.Unmarshal(r.Body(), &res)
+			if err != nil {
+				WaSaad(msg, err)
+			}
+
+			if len(res.Images) > 0 {
+				image, err := base64.StdEncoding.DecodeString(res.Images[0])
+				if err != nil {
+					WaSaadStr(msg, "SD INVALID IMG")
+					return
+				}
+
+				t_all := time.Since(t_start).Round(time.Second)
+				t_gen := t_all - t_cold
+
+				caption := fmt.Sprintf("%s | G %s | C %s\n%d", t_all, t_gen, t_cold, seed)
+				WaReplyImg(msg, image, caption)
+			}
+			return
+		}
+	}
+}
+
+func SdUpscale(msg *events.Message, cmd string) {
+	cmd = strings.TrimSuffix(cmd, ".up")
+	ckpt, ok := SdCkpts[cmd]
+	if !ok {
+		WaSaadStr(msg, "SD UP CKPT NOT FOUND")
+		return
+	}
+
+	log.Info().Str("ckpt", ckpt.name).Msg("SD UP START")
+	t_start := time.Now()
+	defer func() {
+		log.Info().Str("took", fmt.Sprintf("%s", time.Since(t_start).Round(time.Second))).Msg("SD UP END")
+	}()
+
+	pos, neg := SdProcessPrompt(msg, ckpt)
+	ready := SdWarmup(msg)
+	if !ready {
+		return
+	}
+
+	t_cold := time.Since(t_start).Round(time.Second)
+	WaReact(msg, "⏳")
+
+	// Prepare image and config
+	ucfg := GenGet(msg)
+	img := WaMsgMedia(msg)
+	if img == nil {
+		img = WaMsgMediaQuoted(msg)
+		if img == nil {
+			WaSaadStr(msg, "No image to upscale ☹️")
+			return
+		}
+	}
+
+	imgimg, err := WaByte2ImgImg(img)
+	if err != nil {
+		WaSaad(msg, err)
+		return
+	}
+	imgimg = resize.Thumbnail(1344, 1344, imgimg, resize.Lanczos3)
+	init_image := new(bytes.Buffer)
+	if err := png.Encode(init_image, imgimg); err != nil {
+		WaSaad(msg, err)
+		return
+	}
+	target_w := imgimg.Bounds().Dx() * 2
+	target_h := imgimg.Bounds().Dy() * 2
+
+	log.Info().Msg("[SD POSITIVE] " + pos)
+	log.Info().Msg("[SD NEGATIVE] " + neg)
+
+	upcfg := fmt.Sprintf("%dx%d -> %dx%d (%.1f)", imgimg.Bounds().Dx(), imgimg.Bounds().Dy(), target_w, target_h, ucfg.Denoise.strength)
+	log.Info().Msgf("[SD UPSCALE] %s", upcfg)
+
+	// Start generation
+	attempt := 0
+	SdHttpc := HttpcBase().SetBaseURL(ENV_BASEURL_SDAPI).SetBasicAuth(ENV_BAUTH_SDAPI_USER, ENV_BAUTH_SDAPI_PASS).SetTimeout(SDAPI_TIMEOUT)
+	seed := lo.If(ucfg.Seed != -1, ucfg.Seed).Else(GachaRand64(1e9, 9e9))
+	for {
+		if attempt > SDAPI_MAX_ATTEMPT {
+			WaSaadStr(msg, "SD CANNOT REAL GEN")
+			return
+		}
+		body := map[string]any{
+			"init_images":        []string{base64.StdEncoding.EncodeToString(init_image.Bytes())},
+			"prompt":             pos,
+			"negative_prompt":    neg,
+			"sampler_name":       ckpt.sampler,
+			"scheduler":          ckpt.scheduler,
+			"steps":              ckpt.n_sample,
+			"cfg_scale":          ckpt.cfg_scale,
+			"width":              target_w,
+			"height":             target_h,
+			"seed":               seed,
+			"denoising_strength": ucfg.Denoise.strength,
+			"resize_mode":        0,
+			"override_settings":  map[string]any{"sd_model_checkpoint": ckpt.name, "CLIP_stop_at_last_layers": 2},
+		}
+		r, err := SdHttpc.R().SetBody(body).Post("/sdapi/v1/img2img")
+		if err != nil {
+			attempt++
+		} else if r.StatusCode() != http.StatusOK {
+			attempt++
+		} else if r.StatusCode() == http.StatusOK {
+			type SdImages struct {
+				Images []string `json:"images"`
+			}
+
+			var res SdImages
+			err = json.Unmarshal(r.Body(), &res)
+			if err != nil {
+				WaSaad(msg, err)
+			}
+
+			if len(res.Images) > 0 {
+				image, err := base64.StdEncoding.DecodeString(res.Images[0])
+				if err != nil {
+					WaSaadStr(msg, "SD INVALID IMG")
+					return
+				}
+
+				t_all := time.Since(t_start).Round(time.Second)
+				t_gen := t_all - t_cold
+
+				caption := fmt.Sprintf("%s | G %s | C %s\n%s\n%d", t_all, t_gen, t_cold, upcfg, seed)
+				WaReplyImg(msg, image, caption)
+			}
+			return
+		}
+	}
+}
+
+func SdProcessPrompt(msg *events.Message, ckpt SdCkpt) (string, string) {
 	prompt := new(SdPrompt)
 	prompt.prepos = WaMsgPrompt(msg)
 	prompt.prepos = strings.ReplaceAll(prompt.prepos, "\n", " ")
@@ -156,6 +340,10 @@ func SdApi(msg *events.Message, cmd string) {
 		neg = strings.TrimRight(neg, ", ")
 	}
 
+	return pos, neg
+}
+
+func SdWarmup(msg *events.Message) bool {
 	attempt := 0
 	SdHttpc := HttpcBase().SetBaseURL(ENV_BASEURL_SDAPI).SetBasicAuth(ENV_BAUTH_SDAPI_USER, ENV_BAUTH_SDAPI_PASS).SetTimeout(SDAPI_TIMEOUT)
 
@@ -163,7 +351,7 @@ func SdApi(msg *events.Message, cmd string) {
 	for {
 		if attempt > SDAPI_MAX_ATTEMPT {
 			WaSaadStr(msg, "SD DED")
-			return
+			return false
 		}
 		r, err := SdHttpc.R().Get("/sdapi/v1/prompt-styles")
 		if err != nil {
@@ -171,7 +359,7 @@ func SdApi(msg *events.Message, cmd string) {
 		} else if r.StatusCode() != http.StatusOK {
 			if r.StatusCode() == http.StatusTooManyRequests {
 				WaReact(msg, "💸")
-				return
+				return false
 			}
 
 			attempt++
@@ -179,140 +367,21 @@ func SdApi(msg *events.Message, cmd string) {
 			break
 		}
 	}
-
-	t_cold := time.Since(t_start).Round(time.Second)
-
-	WaReact(msg, "⏳")
-	log.Info().Msg("[SD POSITIVE] " + pos)
-	log.Info().Msg("[SD NEGATIVE] " + neg)
-
-	// Start generation
-	seed := lo.If(ucfg.Seed != -1, ucfg.Seed).Else(GachaRand64(1e9, 9e9))
-	for {
-		if attempt > SDAPI_MAX_ATTEMPT {
-			WaSaadStr(msg, "SD CANNOT REAL GEN")
-			return
-		}
-		body := map[string]any{
-			"prompt":            pos,
-			"negative_prompt":   neg,
-			"sampler_name":      ckpt.sampler,
-			"scheduler":         ckpt.scheduler,
-			"steps":             ckpt.n_sample,
-			"cfg_scale":         ckpt.cfg_scale,
-			"width":             ucfg.Reso.Width,
-			"height":            ucfg.Reso.Height,
-			"seed":              seed,
-			"override_settings": map[string]any{"sd_model_checkpoint": ckpt.name, "CLIP_stop_at_last_layers": 2},
-		}
-		r, err := SdHttpc.R().SetBody(body).Post("/sdapi/v1/txt2img")
-		if err != nil {
-			attempt++
-		} else if r.StatusCode() != http.StatusOK {
-			attempt++
-		} else if r.StatusCode() == http.StatusOK {
-			type SdImages struct {
-				Images []string `json:"images"`
-			}
-
-			var res SdImages
-			err = json.Unmarshal(r.Body(), &res)
-			if err != nil {
-				WaSaad(msg, err)
-			}
-
-			if len(res.Images) > 0 {
-				image, err := base64.StdEncoding.DecodeString(res.Images[0])
-				if err != nil {
-					WaSaadStr(msg, "SD INVALID IMG")
-					return
-				}
-
-				t_all := time.Since(t_start).Round(time.Second)
-				t_gen := t_all - t_cold
-
-				caption := fmt.Sprintf("%s | G %s | C %s\n%d", t_all, t_gen, t_cold, seed)
-				WaReplyImg(msg, image, caption)
-			}
-			return
-		}
-	}
-}
-
-type SdReso struct {
-	name   string
-	Width  int
-	Height int
-}
-
-var SdResos = map[string]SdReso{
-	"sq": {name: "1024x1024", Width: 1024, Height: 1024},
-	"w1": {name: "1152x896", Width: 1152, Height: 896},
-	"h1": {name: "896x1152", Width: 896, Height: 1152},
-	"w2": {name: "1216x832", Width: 1216, Height: 832},
-	"h2": {name: "832x1216", Width: 832, Height: 1216},
-	"w3": {name: "1344x768", Width: 1344, Height: 768},
-	"h3": {name: "768x1344", Width: 768, Height: 1344},
-}
-
-type SdUcfg struct {
-	Bluff bool
-	Reso  SdReso
-	Seed  int64
-}
-
-var SdActiveUcfg = map[string]SdUcfg{}
-var SdDefaultUcfg = SdUcfg{Bluff: false, Reso: SdResos["sq"], Seed: -1}
-
-func SdSetUcfg(msg *events.Message, user string, uconfig SdUcfg) {
-	if _, ok := SdActiveUcfg[user]; !ok {
-		WaReplyText(msg, "Hi, user "+msg.Info.Sender.User+"!")
-	}
-	SdActiveUcfg[user] = uconfig
+	return true
 }
 
 func SdCmdChk(msg *events.Message, cmd string) bool {
-	if _, ok := SdCkpts[cmd]; ok {
-		go SdApi(msg, cmd)
-		return true
-	}
-
-	user := WaMsgUser(msg)
-	ucfg := lo.ValueOr(SdActiveUcfg, user, SdDefaultUcfg)
-
-	switch cmd {
-	case "!reso":
-		if reso, ok := SdResos[WaMsgPrompt(msg)]; ok {
-
-			ucfg.Reso = reso
-			SdSetUcfg(msg, user, ucfg)
-			WaReplyText(msg, fmt.Sprintf("A1111 resolution set to %s for you 🫶", reso.name))
-		} else {
-			WaReplyText(msg, "Resolution not found. Choices: \nsq, h1, h2, h3, w1, w2, w3\n\nExample: `!reso sq`")
+	if !strings.HasSuffix(cmd, ".up") {
+		if _, ok := SdCkpts[cmd]; ok {
+			go SdApi(msg, cmd)
+			return true
 		}
-		return true
-	case "!bluff":
-		ucfg.Bluff = true
-		SdSetUcfg(msg, user, ucfg)
-		WaReact(msg, "😏")
-		return true
-	case "!seed":
-		var seed int64 = ucfg.Seed
-		qry := WaMsgPrompt(msg)
-		if parsed, err := strconv.ParseInt(qry, 10, 64); err == nil {
-			seed = parsed
-			WaReact(msg, "🔒")
-		} else if seed == -1 {
-			seed = GachaRand64(1e9, 9e9)
-			WaReact(msg, "🔒")
-		} else if seed != -1 {
-			seed = -1
-			WaReact(msg, "🎲")
+	} else {
+		basecmd := strings.TrimSuffix(cmd, ".up")
+		if _, ok := SdCkpts[basecmd]; ok {
+			go SdUpscale(msg, cmd)
+			return true
 		}
-		ucfg.Seed = seed
-		SdSetUcfg(msg, user, ucfg)
-		return true
 	}
-
 	return false
 }

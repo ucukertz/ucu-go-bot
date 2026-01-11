@@ -11,33 +11,59 @@ func MenuTop() string {
 	return strings.Join([]string{
 		"*Ucukertz WA bot*",
 		"*!ai* Gemini",
-		"*!cai* ChatGPT",
-		"*!img* SDXL",
-		"*!imgm* Advanced image gen menu",
+		"*!img* Z-Image Turbo [ZeroGPU]",
+		"*!img.z* Image gen with ZeroGPU",
+		"*!img.m* Image gen with Modal",
+		"*!img.e* Image editing",
+
 		"*!what* More explanation for commands (ex: '!what ai')",
 	}, "\n")
 }
 
-func MenuImage() string {
+func MenuImgm() string {
 	return strings.Join([]string{
-		"*Advanced image gen menu*",
-		"*A1111* - [Modal]",
+		"*Image gen with Modal*",
+		"",
+		"*Stable Diffusion*",
 		"*!m.fwa* Fuwa v7 Advanced",
 		"*!m.fws* Fuwa v7 Super",
 		"*!m.fwt* Fuwa v7 Turbo",
 		"*!m.mei* Meina v6",
 		"*!m.wai* Waifu v5",
+		"Add .up at the end for upscaling `ex: !m.fws.up`",
 		"",
-		"_A1111 utilities_",
+		"_Utilities_",
 		"*!reso* Set custom resolution",
+		"*!resos* Show resolution choices",
+		"*!den* Set denoise strength",
+		"*!dens* Show denoise strength choices",
 		"*!bluff* Bluff",
 		"*!seed* Set or lock seed",
 		"",
-		"*Natural Language Editing*",
-		"*!m.flx* Flux Kontext",
+	}, "\n")
+}
+
+func MenuImgz() string {
+	return strings.Join([]string{
+		"*Image gen with ZeroGPU*",
+		"",
+		"*!z.zit* Z-Image Turbo",
+		"",
+		"_Utilities_",
+		"*!reso* Set custom resolution",
+		"*!resos* Show resolution choices",
 		"",
 		"*Legacy Stable Diffusion*",
 		"*!sxl* Stable Diffusion XL",
+	}, "\n")
+}
+
+func MenuImge() string {
+	return strings.Join([]string{
+		"*Image editing*",
+		"",
+		"*Natural Language Editing*",
+		"*!m.flx* Flux Kontext",
 	}, "\n")
 }
 
@@ -46,13 +72,7 @@ func MenuWhat(query string) string {
 	case "ai":
 		return "Gemini, ask anything. Can process pictures and documents."
 	case "cai":
-		return "ChatGPT, ask anything. Capable of browsing the web. Slightly slower to response."
-	case "yai":
-		return "YouBot, ask anything. Frequently out of service."
-	case "img":
-		return "Stable Diffusion XL txt2img. Massive breakthrough compared to earlier versions of SD."
-	case "l.sxl":
-		return "Stable Diffusion XL txt2img. Massive breakthrough compared to earlier versions of SD."
+		return "[DEPRECATED] ChatGPT, Use !ai instead."
 	case "m.wai":
 		return "[A1111] Waifu v5 txt2img. Anime-style. Booru average style for chars. 2x slower than Fuwa."
 	case "m.mei":
@@ -63,12 +83,18 @@ func MenuWhat(query string) string {
 		return "[A1111] Fuwa v7 txt2img. Super stable cutesy anime-style, vibrant colors."
 	case "m.fwa":
 		return "[A1111] Fuwa v7 txt2img. Stable clean anime-style, better anatomy."
-	case "reso":
-		return "[A1111] Set custom resolution for image generation."
 	case "bluff":
 		return "[A1111] Next generation outputs bluff image."
+	case "z.zit", "img":
+		return "Z-Image Turbo txt2img. General purpose image gen with natural language."
+	case "reso":
+		return "[IMG] Set custom resolution for image generation."
+	case "den":
+		return "[IMG] Set denoise strength for image generation."
 	case "seed":
-		return "[A1111] Send only `!i.seed` to toggle seed randomness. Send `!i.seed <number>` to set a specific seed."
+		return "[IMG] Send only `!i.seed` to toggle seed randomness. Send `!i.seed <number>` to set a specific seed."
+	case "l.sxl":
+		return "Stable Diffusion XL txt2img. Massive breakthrough compared to earlier versions of SD."
 	case "m.flx":
 		return "Flux Kontext txtimg2img. Natural Language Editing."
 	case "what":
@@ -83,8 +109,14 @@ func MenuCmdChk(msg *events.Message, cmd string) bool {
 	case "!menu":
 		WaReplyText(msg, MenuTop())
 		return true
-	case "!imgm":
-		WaReplyText(msg, MenuImage())
+	case "!img.m":
+		WaReplyText(msg, MenuImgm())
+		return true
+	case "!img.z":
+		WaReplyText(msg, MenuImgz())
+		return true
+	case "!img.e":
+		WaReplyText(msg, MenuImge())
 		return true
 	case "!what":
 		WaReplyText(msg, MenuWhat(WaMsgPrompt(msg)))

@@ -60,7 +60,15 @@ func ChatGaiOneText(query string, hint string) (string, error) {
 }
 
 func ChatGaiEmpty() (*genai.Chat, error) {
-	return GaiChatClient.Chats.Create(context.Background(), GEMINI_MODEL, nil, nil)
+	groundingTool := &genai.Tool{
+		GoogleSearch: &genai.GoogleSearch{},
+	}
+
+	config := &genai.GenerateContentConfig{
+		Tools: []*genai.Tool{groundingTool},
+	}
+
+	return GaiChatClient.Chats.Create(context.Background(), GEMINI_MODEL, config, nil)
 }
 
 func ChatGaiConvo(msg *events.Message) {
@@ -219,6 +227,10 @@ func ChatCmdChk(msg *events.Message, cmd string) bool {
 		return true
 	case AdminDevDiff("!x.flx", "!m.flx"):
 		go ChatKontext(msg)
+		return true
+	case AdminDevDiff("!xcai", "!cai"):
+		WaReplyText(msg, "Sorry, deprecated. Use !ai instead. Falling back to !ai. Will be removed soon.")
+		go ChatGaiConvo(msg)
 		return true
 	}
 

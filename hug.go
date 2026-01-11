@@ -6,21 +6,52 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"github.com/ucukertz/hfs"
 	"go.mau.fi/whatsmeow/types/events"
 )
 
 var (
+	HFS_TIMEOUT = 300 * time.Second
+
 	HUG_MAX_ATTEMPT = 10
 	HUG_RETRY_SEC   = 20 * time.Second
 )
 
-type hugmodel struct {
+type hugLegacyModel struct {
 	url     string
 	postpos string
 }
 
-var HugLgc = map[string]hugmodel{
-	"!img":   {"stabilityai/stable-diffusion-xl-base-1.0", ""},
+func HugZit(msg *events.Message) {
+	s := hfs.NewHfs[any, any]("mrfakename-z-image-turbo").WithBearerToken(ENV_TOKEN_HUGGING).WithTimeout(HFS_TIMEOUT)
+	log.Info().Msg("HUG ZIT start")
+
+	query := WaMsgPrompt(msg)
+	t_start := time.Now()
+
+	ucfg := GenGet(msg)
+	reso := ucfg.Reso
+	img, err := s.DoFD("/generate_image", query, reso.Height, reso.Width, 9, 42, true)
+	if err != nil {
+		WaSaad(msg, err)
+		return
+	}
+
+	t_all := time.Since(t_start).Round(time.Second)
+	dur := fmt.Sprintf("%s\n", t_all)
+	WaReplyImg(msg, img, dur)
+}
+
+func HugCmdChk(msg *events.Message, cmd string) bool {
+	switch cmd {
+	case AdminDevDiff("!x.zit", "!z.zit"), AdminDevDiff("!ximg", "!img"):
+		go HugZit(msg)
+		return true
+	}
+	return false
+}
+
+var HugLgc = map[string]hugLegacyModel{
 	"!l.sxl": {"stabilityai/stable-diffusion-xl-base-1.0", ""},
 }
 
@@ -63,10 +94,10 @@ func HuggingLegacy(msg *events.Message, model string, query string) {
 }
 
 func HugLegacyCmdChk(msg *events.Message, cmd string) bool {
-	if _, ok := HugLgc[cmd]; !ok {
-		return false
+	if _, ok := HugLgc[cmd]; ok {
+		go HuggingLegacy(msg, cmd, WaMsgPrompt(msg))
+		return true
 	}
 
-	go HuggingLegacy(msg, cmd, WaMsgPrompt(msg))
-	return true
+	return false
 }

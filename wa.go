@@ -21,6 +21,7 @@ import (
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
+	"golang.org/x/image/webp"
 )
 
 var syncing = true
@@ -78,6 +79,11 @@ func WaByte2ImgImg(b []byte) (image.Image, error) {
 	if err == nil {
 		return jpegimg, nil
 	}
+	webpimg, err := webp.Decode(bytes.NewReader(b))
+	if err == nil {
+		return webpimg, nil
+	}
+
 	return nil, fmt.Errorf("unsupported image format")
 }
 
@@ -107,7 +113,7 @@ func WaImageUpload(img []byte) (WaUploadedImage, error) {
 
 	thumbimgimg := resize.Thumbnail(72, 72, imgimg, resize.Lanczos3)
 	thumbbuf := new(bytes.Buffer)
-	err = jpeg.Encode(thumbbuf, thumbimgimg, &jpeg.Options{Quality: 80})
+	err = png.Encode(thumbbuf, thumbimgimg)
 	if err != nil {
 		return WaUploadedImage{}, fmt.Errorf("IMGTHUMBENC: %w", err)
 	}
@@ -417,17 +423,19 @@ func cmdHandler(msg *events.Message) {
 
 	if ok := SdCmdChk(msg, cmd); ok {
 		return
-	} else if ok := HugLegacyCmdChk(msg, cmd); ok {
+	} else if ok := GenCmdChk(msg, cmd); ok {
 		return
 	} else if ok := ChatCmdChk(msg, cmd); ok {
 		return
-	} else if ok := OutsCmdChk(msg, cmd); ok {
+	} else if ok := HugCmdChk(msg, cmd); ok {
 		return
 	} else if ok := MenuCmdChk(msg, cmd); ok {
 		return
 	} else if ok := GacurCmdChk(msg, cmd); ok {
 		return
 	} else if ok := AdminCmdChk(msg, cmd); ok {
+		return
+	} else if ok := HugLegacyCmdChk(msg, cmd); ok {
 		return
 	}
 }
@@ -449,7 +457,6 @@ func eventHandler(evt any) {
 			return
 		}
 
-		OutsCapture(v)
 		if ENV_DEV_MODE == "1" && !IsAdmin(v) {
 			log.Info().Str("user", WaMsgUser(v)).Msg("DEV MODE: Skipping message from user")
 			return
