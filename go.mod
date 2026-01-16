@@ -12,7 +12,7 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rs/zerolog v1.34.0
 	github.com/samber/lo v1.52.0
-	github.com/ucukertz/hfs v0.9.12
+	github.com/ucukertz/hfs v0.9.16
 	go.mau.fi/whatsmeow v0.0.0-20251216102424-56a8e44b0cec
 	golang.org/x/image v0.34.0
 	google.golang.org/genai v1.39.0

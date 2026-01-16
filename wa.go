@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"image"
 	"image/jpeg"
 	"image/png"
 	"net/http"
@@ -21,7 +20,6 @@ import (
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
-	"golang.org/x/image/webp"
 )
 
 var syncing = true
@@ -66,27 +64,6 @@ func WaReplyText(msg *events.Message, text string) {
 	WaSendText(msg.Info.Chat, text)
 }
 
-func WaByte2ImgImg(b []byte) (image.Image, error) {
-	imgimg, _, err := image.Decode(bytes.NewReader(b))
-	if err == nil {
-		return imgimg, nil
-	}
-	pngimg, err := png.Decode(bytes.NewReader(b))
-	if err == nil {
-		return pngimg, nil
-	}
-	jpegimg, err := jpeg.Decode(bytes.NewReader(b))
-	if err == nil {
-		return jpegimg, nil
-	}
-	webpimg, err := webp.Decode(bytes.NewReader(b))
-	if err == nil {
-		return webpimg, nil
-	}
-
-	return nil, fmt.Errorf("unsupported image format")
-}
-
 type WaUploadedBytes struct {
 	mime string
 	upr  whatsmeow.UploadResponse
@@ -99,7 +76,7 @@ type WaUploadedImage struct {
 }
 
 func WaImageUpload(img []byte) (WaUploadedImage, error) {
-	imgimg, err := WaByte2ImgImg(img)
+	imgimg, err := PicByte2ImgImg(img)
 	if err != nil {
 		return WaUploadedImage{}, fmt.Errorf("IMGCONV: %w", err)
 	}

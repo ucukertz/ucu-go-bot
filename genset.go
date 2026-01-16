@@ -9,59 +9,59 @@ import (
 )
 
 type GenReso struct {
-	name   string
+	Name   string
 	Width  int
 	Height int
 }
 
 var GenResos = map[string]GenReso{
 	// SDXL standard resolutions
-	"sq": {name: "SDXL_SQ", Width: 1024, Height: 1024},
-	"w1": {name: "SDXL_W1", Width: 1152, Height: 896},
-	"h1": {name: "SDXL_H1", Width: 896, Height: 1152},
-	"w2": {name: "SDXL_W2", Width: 1216, Height: 832},
-	"h2": {name: "SDXL_H2", Width: 832, Height: 1216},
-	"w3": {name: "SDXL_W3", Width: 1344, Height: 768},
-	"h3": {name: "SDXL_H3", Width: 768, Height: 1344},
+	"sq": {Name: "SDXL_SQ", Width: 1024, Height: 1024},
+	"w1": {Name: "SDXL_W1", Width: 1152, Height: 896},
+	"h1": {Name: "SDXL_H1", Width: 896, Height: 1152},
+	"w2": {Name: "SDXL_W2", Width: 1216, Height: 832},
+	"h2": {Name: "SDXL_H2", Width: 832, Height: 1216},
+	"w3": {Name: "SDXL_W3", Width: 1344, Height: 768},
+	"h3": {Name: "SDXL_H3", Width: 768, Height: 1344},
 
 	// 1k
-	"10sq": {name: "1024_1x1", Width: 1024, Height: 1024},
-	"10w1": {name: "1024_9x7", Width: 1152, Height: 896},
-	"10h1": {name: "1024_7x9", Width: 896, Height: 1152},
-	"10w2": {name: "1024_4x3", Width: 1152, Height: 864},
-	"10h2": {name: "1024_3x4", Width: 864, Height: 1152},
-	"10w3": {name: "1024_3x2", Width: 1248, Height: 832},
-	"10h3": {name: "1024_2x3", Width: 832, Height: 1248},
-	"10w4": {name: "1024_16x9", Width: 1280, Height: 720},
-	"10h4": {name: "1024_9x16", Width: 720, Height: 1280},
-	"10w5": {name: "1024_21x9", Width: 1344, Height: 576},
-	"10h5": {name: "1024_9x21", Width: 576, Height: 1344},
+	"10sq": {Name: "1024_1:1", Width: 1024, Height: 1024},
+	"10w1": {Name: "1024_9:7", Width: 1152, Height: 896},
+	"10h1": {Name: "1024_7:9", Width: 896, Height: 1152},
+	"10w2": {Name: "1024_4:3", Width: 1152, Height: 864},
+	"10h2": {Name: "1024_3:4", Width: 864, Height: 1152},
+	"10w3": {Name: "1024_3:2", Width: 1248, Height: 832},
+	"10h3": {Name: "1024_2:3", Width: 832, Height: 1248},
+	"10w4": {Name: "1024_16:9", Width: 1280, Height: 720},
+	"10h4": {Name: "1024_9:16", Width: 720, Height: 1280},
+	"10w5": {Name: "1024_21:9", Width: 1344, Height: 576},
+	"10h5": {Name: "1024_9:21", Width: 576, Height: 1344},
 
 	// 1.2k
-	"12sq": {name: "1280_1x1", Width: 1280, Height: 1280},
-	"12w1": {name: "1280_9x7", Width: 1440, Height: 1120},
-	"12h1": {name: "1280_7x9", Width: 1120, Height: 1440},
-	"12w2": {name: "1280_4x3", Width: 1472, Height: 1104},
-	"12h2": {name: "1280_3x4", Width: 1104, Height: 1472},
-	"12w3": {name: "1280_3x2", Width: 1536, Height: 1024},
-	"12h3": {name: "1280_2x3", Width: 1024, Height: 1536},
-	"12w4": {name: "1280_16x9", Width: 1536, Height: 864},
-	"12h4": {name: "1280_9x16", Width: 864, Height: 1536},
-	"12w5": {name: "1280_21x9", Width: 1680, Height: 720},
-	"12h5": {name: "1280_9x21", Width: 720, Height: 1680},
+	"12sq": {Name: "1280_1:1", Width: 1280, Height: 1280},
+	"12w1": {Name: "1280_9:7", Width: 1440, Height: 1120},
+	"12h1": {Name: "1280_7:9", Width: 1120, Height: 1440},
+	"12w2": {Name: "1280_4:3", Width: 1472, Height: 1104},
+	"12h2": {Name: "1280_3:4", Width: 1104, Height: 1472},
+	"12w3": {Name: "1280_3:2", Width: 1536, Height: 1024},
+	"12h3": {Name: "1280_2:3", Width: 1024, Height: 1536},
+	"12w4": {Name: "1280_16:9", Width: 1536, Height: 864},
+	"12h4": {Name: "1280_9:16", Width: 864, Height: 1536},
+	"12w5": {Name: "1280_21:9", Width: 1680, Height: 720},
+	"12h5": {Name: "1280_9:21", Width: 720, Height: 1680},
 
 	// 1.5k
-	"15sq": {name: "1536x1536", Width: 1536, Height: 1536},
-	"15w1": {name: "1536_9x7", Width: 1728, Height: 1344},
-	"15h1": {name: "1536_7x9", Width: 1344, Height: 1728},
-	"15w2": {name: "1536_4x3", Width: 1728, Height: 1296},
-	"15h2": {name: "1536_3x4", Width: 1296, Height: 1728},
-	"15w3": {name: "1536_3x2", Width: 1872, Height: 1248},
-	"15h3": {name: "1536_2x3", Width: 1248, Height: 1872},
-	"15w4": {name: "1536_16x9", Width: 2048, Height: 1152},
-	"15h4": {name: "1536_9x16", Width: 1152, Height: 2048},
-	"15w5": {name: "1536_21x9", Width: 2016, Height: 864},
-	"15h5": {name: "1536_9x21", Width: 864, Height: 2016},
+	"15sq": {Name: "1536_1:1", Width: 1536, Height: 1536},
+	"15w1": {Name: "1536_9:7", Width: 1728, Height: 1344},
+	"15h1": {Name: "1536_7:9", Width: 1344, Height: 1728},
+	"15w2": {Name: "1536_4:3", Width: 1728, Height: 1296},
+	"15h2": {Name: "1536_3:4", Width: 1296, Height: 1728},
+	"15w3": {Name: "1536_3:2", Width: 1872, Height: 1248},
+	"15h3": {Name: "1536_2:3", Width: 1248, Height: 1872},
+	"15w4": {Name: "1536_16:9", Width: 2048, Height: 1152},
+	"15h4": {Name: "1536_9:16", Width: 1152, Height: 2048},
+	"15w5": {Name: "1536_21:9", Width: 2016, Height: 864},
+	"15h5": {Name: "1536_9:21", Width: 864, Height: 2016},
 }
 
 type GenDen struct {
@@ -159,7 +159,7 @@ func GenCmdChk(msg *events.Message, cmd string) bool {
 	case "!reso":
 		if reso, ok := GenResos[WaMsgPrompt(msg)]; ok {
 			GenSetReso(msg, WaMsgPrompt(msg))
-			WaReplyText(msg, fmt.Sprintf("Resolution set to *%s* for you 🫶", reso.name))
+			WaReplyText(msg, fmt.Sprintf("Resolution set to *%s* for you 🫶", reso.Name))
 		} else {
 			WaReplyText(msg, "Resolution not found. Choices: \nsend !resos\n\nExample: `!reso sq`")
 		}
@@ -178,7 +178,7 @@ func GenCmdChk(msg *events.Message, cmd string) bool {
 			resos = append(resos, GenResos[key])
 		}
 		for i, reso := range resos {
-			choices = fmt.Sprint(choices, fmt.Sprintf("- *%s* -> %s (%dx%d)\n", keys[i], reso.name, reso.Width, reso.Height))
+			choices = fmt.Sprint(choices, fmt.Sprintf("- *%s* -> %s (%dx%d)\n", keys[i], reso.Name, reso.Width, reso.Height))
 		}
 		WaReplyText(msg, choices)
 		return true

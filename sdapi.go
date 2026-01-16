@@ -112,9 +112,9 @@ func SdApi(msg *events.Message, cmd string) {
 	t_cold := time.Since(t_start).Round(time.Second)
 
 	WaReact(msg, "⏳")
-	if !strings.Contains(ucfg.Reso.name, "SDXL") {
-		println("Non-SDXL resolution used:", ucfg.Reso.name)
-		WaReplyText(msg, "Not using standard SDXL resolution. Image quality may be affected.")
+	if !strings.Contains(ucfg.Reso.Name, "SDXL") {
+		warn := fmt.Sprint("Using non-SDXL reso ", ucfg.Reso.Name, ". Image quality may be affected.")
+		WaReplyText(msg, warn)
 	}
 	log.Info().Msg("[SD POSITIVE] " + pos)
 	log.Info().Msg("[SD NEGATIVE] " + neg)
@@ -208,7 +208,7 @@ func SdUpscale(msg *events.Message, cmd string) {
 		}
 	}
 
-	imgimg, err := WaByte2ImgImg(img)
+	imgimg, err := PicByte2ImgImg(img)
 	if err != nil {
 		WaSaad(msg, err)
 		return

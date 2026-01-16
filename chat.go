@@ -176,7 +176,7 @@ func ChatKontext(msg *events.Message) {
 		}
 	}
 
-	imgimg, err := WaByte2ImgImg(img)
+	imgimg, err := PicByte2ImgImg(img)
 	if err != nil {
 		log.Error().Err(err).Msg("IMGCONV")
 		WaSaadStr(msg, "IMGCONV: "+err.Error())

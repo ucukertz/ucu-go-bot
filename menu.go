@@ -25,7 +25,7 @@ func MenuImgm() string {
 		"*Image gen with Modal*",
 		"",
 		"*Stable Diffusion*",
-		"*!m.fwa* Fuwa v7 Advanced",
+		"*!m.fwa* Fuwa v7 Anthro",
 		"*!m.fws* Fuwa v7 Super",
 		"*!m.fwt* Fuwa v7 Turbo",
 		"*!m.mei* Meina v6",
@@ -48,10 +48,12 @@ func MenuImgz() string {
 		"*Image gen with ZeroGPU*",
 		"",
 		"*!z.zit* Z-Image Turbo",
+		"*!z.wai* Wai Illu v12-16",
 		"",
 		"_Utilities_",
 		"*!reso* Set custom resolution",
 		"*!resos* Show resolution choices",
+		"!z.tag Get booru tags for an image",
 		"",
 		"*Legacy Stable Diffusion*",
 		"*!sxl* Stable Diffusion XL",
@@ -64,6 +66,9 @@ func MenuImge() string {
 		"",
 		"*Natural Language Editing*",
 		"*!m.flx* Flux Kontext",
+		"",
+		"*Specialized editing*",
+		"!*z.qma* Qwen Many Angles",
 	}, "\n")
 }
 
@@ -87,6 +92,12 @@ func MenuWhat(query string) string {
 		return "[A1111] Next generation outputs bluff image."
 	case "z.zit", "img":
 		return "Z-Image Turbo txt2img. General purpose image gen with natural language."
+	case "z.wai":
+		return "Wai Illus v12-16 txt2img. Most popular public booru SDXL model. You can choose v12-16 (ex: !z.wai.15)."
+	case "z.tag":
+		return "Get booru tags for an image."
+	case "z.qma":
+		return "Qwen Many Angles img2img. Get different camera angles by setting rotation, elevation, distance."
 	case "reso":
 		return "[IMG] Set custom resolution for image generation."
 	case "den":
