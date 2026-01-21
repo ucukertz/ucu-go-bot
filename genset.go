@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 
 	"go.mau.fi/whatsmeow/types/events"
 )
@@ -81,11 +82,14 @@ var GenDens = map[string]GenDen{
 	"9": {name: "unrecognizable", strength: 0.9},
 }
 
+const MAX_USERPIC = 3
+
 type GenUserConfig struct {
 	Bluff   bool
 	Reso    GenReso
 	Seed    int64
 	Denoise GenDen
+	Pics    [MAX_USERPIC][]byte
 }
 
 var GenActiveUserConfig = map[string]GenUserConfig{}
@@ -140,6 +144,30 @@ func GenSetSeed(msg *events.Message, seed int64) {
 		ucfg = GenDefaultUserConfig
 	}
 	ucfg.Seed = seed
+	GenActiveUserConfig[user] = ucfg
+}
+
+func GenSetPic(msg *events.Message, num int, pic []byte) {
+	user := WaMsgUser(msg)
+	ucfg, ok := GenActiveUserConfig[user]
+	if !ok {
+		GenSet(msg, GenDefaultUserConfig)
+		ucfg = GenDefaultUserConfig
+	}
+	ucfg.Pics[num-1] = pic
+	GenActiveUserConfig[user] = ucfg
+}
+
+func GenSetPicClear(msg *events.Message) {
+	user := WaMsgUser(msg)
+	ucfg, ok := GenActiveUserConfig[user]
+	if !ok {
+		GenSet(msg, GenDefaultUserConfig)
+		ucfg = GenDefaultUserConfig
+	}
+	for i := range MAX_USERPIC {
+		ucfg.Pics[i] = nil
+	}
 	GenActiveUserConfig[user] = ucfg
 }
 
@@ -226,6 +254,38 @@ func GenCmdChk(msg *events.Message, cmd string) bool {
 			WaReact(msg, "🎲")
 		}
 		GenSetSeed(msg, seed)
+		return true
+	}
+
+	if strings.HasPrefix(cmd, "!pic") {
+		pic := WaMsgMedia(msg)
+		if pic == nil {
+			pic = WaMsgMediaQuoted(msg)
+			if pic == nil {
+				WaReplyText(msg, "No image to set ☹️")
+				return true
+			}
+		}
+		if strings.HasSuffix(cmd, "0") {
+			GenSetPicClear(msg)
+			WaReplyText(msg, "Your pics are cleared ✨")
+			return true
+		} else {
+			numStr := strings.TrimPrefix(cmd, "!pic")
+			num, err := strconv.Atoi(numStr)
+
+			if err != nil {
+				text := fmt.Sprintf("Invalid format. Use !picN (N=0-%d)", MAX_USERPIC)
+				WaReplyText(msg, text)
+				return true
+			}
+			if num < 1 || num > MAX_USERPIC {
+				text := fmt.Sprintf("Invalid pic number (only 1-%d)", MAX_USERPIC)
+				WaReplyText(msg, text)
+				return true
+			}
+			GenSetPic(msg, num, pic)
+		}
 		return true
 	}
 	return false

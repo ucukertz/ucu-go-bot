@@ -30,7 +30,7 @@ func MenuImgm() string {
 		"*!m.fwt* Fuwa v7 Turbo",
 		"*!m.mei* Meina v6",
 		"*!m.wai* Waifu v5",
-		"Add .up at the end for upscaling `ex: !m.fws.up`",
+		"Add .up at the end for upscaling ex:`!m.fws.up`",
 		"",
 		"_Utilities_",
 		"*!reso* Set custom resolution",
@@ -65,10 +65,12 @@ func MenuImge() string {
 		"*Image editing*",
 		"",
 		"*Natural Language Editing*",
+		"*!z.qie* Qwen Image Edit",
 		"*!m.flx* Flux Kontext",
 		"",
 		"*Specialized editing*",
 		"!*z.qma* Qwen Many Angles",
+		"!*z.rbg* Remove background",
 	}, "\n")
 }
 
@@ -96,18 +98,22 @@ func MenuWhat(query string) string {
 		return "Wai Illus v12-16 txt2img. Most popular public booru SDXL model. You can choose v12-16 (ex: !z.wai.15)."
 	case "z.tag":
 		return "Get booru tags for an image."
-	case "z.qma":
-		return "Qwen Many Angles img2img. Get different camera angles by setting rotation, elevation, distance."
 	case "reso":
 		return "[IMG] Set custom resolution for image generation."
 	case "den":
 		return "[IMG] Set denoise strength for image generation."
 	case "seed":
 		return "[IMG] Send only `!i.seed` to toggle seed randomness. Send `!i.seed <number>` to set a specific seed."
-	case "l.sxl":
-		return "Stable Diffusion XL txt2img. Massive breakthrough compared to earlier versions of SD."
+	case "z.qie":
+		return "Qwen Image Edit img2img. Natural language editing. Supports multiple input images. Use `!qie.r` to use custom resolution."
 	case "m.flx":
 		return "Flux Kontext txtimg2img. Natural Language Editing."
+	case "z.qma":
+		return "Qwen Many Angles img2img. Get different camera angles by setting rotation, elevation, distance."
+	case "z.rbg":
+		return "Remove background from image. Very fast."
+	case "l.sxl":
+		return "Stable Diffusion XL txt2img."
 	case "what":
 		return "*U wot m8?*"
 	default:
