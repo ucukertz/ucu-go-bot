@@ -47,16 +47,24 @@ func HugZit(msg *events.Message) {
 }
 
 func HugQie(msg *events.Message, cmd string) {
+	s := hfs.NewHfs[any, any]("linoyts-qwen-image-edit-2511-fast").
+		WithBearerToken(ENV_TOKEN_HUGGING).
+		WithTimeout(HFS_TIMEOUT)
+
 	ucfg := GenGet(msg)
 	iimg := WaMsgMedia(msg)
 	if iimg == nil {
 		iimg = WaMsgMediaQuoted(msg)
 	}
 	firstImg := iimg
-	iimgarr := []hfs.FileData{}
+	iimgarr := []any{}
 	if iimg != nil {
-		fd, _ := hfs.NewFileData("input").FromBytes(iimg)
-		iimgarr = append(iimgarr, *fd)
+		fd, err := hfs.NewFileData("input.jpg").FromUpload(*s, iimg)
+		if err != nil {
+			WaSaad(msg, err)
+			return
+		}
+		iimgarr = append(iimgarr, map[string]any{"image": fd, "caption": nil})
 	} else {
 		if ucfg.Pics[0] == nil {
 			WaReplyText(msg, "No image to edit ☹️")
@@ -67,8 +75,12 @@ func HugQie(msg *events.Message, cmd string) {
 			if iimg == nil {
 				break
 			}
-			fd, _ := hfs.NewFileData("input").FromBytes(iimg)
-			iimgarr = append(iimgarr, *fd)
+			fd, err := hfs.NewFileData("input.jpg").FromUpload(*s, iimg)
+			if err != nil {
+				WaSaad(msg, err)
+				return
+			}
+			iimgarr = append(iimgarr, map[string]any{"image": fd, "caption": nil})
 		}
 	}
 
@@ -76,17 +88,15 @@ func HugQie(msg *events.Message, cmd string) {
 	log.Info().Msg("HUG QIE start")
 	t_start := time.Now()
 
+	const max_reso_dim = 1168
 	reso := ucfg.Reso
-	target_w, target_h := PicAdjustReso(reso.Width, reso.Height, PIC_RESO_1k2)
+	target_w, target_h := PicAdjustReso(reso.Width, reso.Height, max_reso_dim)
 
 	if !strings.HasSuffix(cmd, ".r") {
 		imgimg, _ := PicByte2ImgImg(firstImg)
-		target_w, target_h = PicAdjustReso(imgimg.Bounds().Dx(), imgimg.Bounds().Dy(), PIC_RESO_1k2)
+		target_w, target_h = PicAdjustReso(imgimg.Bounds().Dx(), imgimg.Bounds().Dy(), max_reso_dim)
 	}
 
-	s := hfs.NewHfs[any, any]("linoyts-qwen-image-edit-2511-fast").
-		WithBearerToken(ENV_TOKEN_HUGGING).
-		WithTimeout(HFS_TIMEOUT)
 	rsp, err := s.Do("/infer",
 		iimgarr,
 		query,
@@ -103,23 +113,14 @@ func HugQie(msg *events.Message, cmd string) {
 		return
 	}
 
-	imgarr := rsp[0].([]any)
-	json := imgarr[0].(map[string]any)
-	fd, err := hfs.ParseFileData(json["image"])
-	if err != nil {
-		WaSaad(msg, err)
-		return
-	}
-
-	fd.URL = strings.ReplaceAll(fd.URL, "space/ca", "space")
-	img, err := hfs.FileDataDownload(fd, 60*time.Second)
+	img, err := hfs.GetGalleryImage(rsp[0], 0)
 	if err != nil {
 		WaSaad(msg, err)
 		return
 	}
 
 	t_all := time.Since(t_start).Round(time.Second)
-	caption := fmt.Sprintf("%ss\n", t_all)
+	caption := fmt.Sprintf("%s\n%dx%d", t_all, target_w, target_h)
 	WaReplyImg(msg, img, caption)
 }
 
@@ -250,16 +251,7 @@ func HugWai(msg *events.Message, cmd string) {
 		return
 	}
 
-	imgarr := rsp[0].([]any)
-	json := imgarr[0].(map[string]any)
-	fd, err := hfs.ParseFileData(json["image"])
-	if err != nil {
-		WaSaad(msg, err)
-		return
-	}
-
-	fd.URL = strings.ReplaceAll(fd.URL, "space/ca", "space")
-	img, err := hfs.FileDataDownload(fd, 60*time.Second)
+	img, err := hfs.GetGalleryImage(rsp[0], 0)
 	if err != nil {
 		WaSaad(msg, err)
 		return
@@ -316,7 +308,7 @@ func HugRbg(msg *events.Message) {
 	}
 
 	imgarr := rsp[0].([]any)
-	img, err := hfs.GetFileData(imgarr[0])
+	img, err := hfs.GetFileData(imgarr[1])
 	if err != nil {
 		WaSaad(msg, err)
 		return
@@ -329,9 +321,6 @@ func HugCmdChk(msg *events.Message, cmd string) bool {
 	switch cmd {
 	case AdminDevDiff("!x.zit", "!z.zit"), AdminDevDiff("!ximg", "!img"):
 		go HugZit(msg)
-		return true
-	case AdminDevDiff("!x.qie", "!z.qie"):
-		go HugQie(msg, cmd)
 		return true
 	case AdminDevDiff("!x.tag", "!z.tag"):
 		go HugTag(msg)
@@ -346,6 +335,9 @@ func HugCmdChk(msg *events.Message, cmd string) bool {
 		return true
 	} else if strings.HasPrefix(cmd, AdminDevDiff("!x.qma", "!z.qma")) {
 		go HugQma(msg, cmd)
+		return true
+	} else if strings.HasPrefix(cmd, AdminDevDiff("!x.qie", "!z.qie")) {
+		go HugQie(msg, cmd)
 		return true
 	}
 

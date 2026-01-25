@@ -11,7 +11,7 @@ import (
 )
 
 func IsAdmin(msg *events.Message) bool {
-	if strings.Contains(msg.Info.Sender.User, "035") {
+	if strings.Contains(msg.Info.Sender.User, "234") {
 		return true
 	}
 	return false

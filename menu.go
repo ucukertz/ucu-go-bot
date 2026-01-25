@@ -25,8 +25,8 @@ func MenuImgm() string {
 		"*Image gen with Modal*",
 		"",
 		"*Stable Diffusion*",
-		"*!m.fwa* Fuwa v7 Anthro",
 		"*!m.fws* Fuwa v7 Super",
+		"*!m.fwa* Fuwa v7 Anthro",
 		"*!m.fwt* Fuwa v7 Turbo",
 		"*!m.mei* Meina v6",
 		"*!m.wai* Waifu v5",
@@ -53,7 +53,7 @@ func MenuImgz() string {
 		"_Utilities_",
 		"*!reso* Set custom resolution",
 		"*!resos* Show resolution choices",
-		"!z.tag Get booru tags for an image",
+		"*!z.tag* Get booru tags for an image",
 		"",
 		"*Legacy Stable Diffusion*",
 		"*!sxl* Stable Diffusion XL",
@@ -84,12 +84,12 @@ func MenuWhat(query string) string {
 		return "[A1111] Waifu v5 txt2img. Anime-style. Booru average style for chars. 2x slower than Fuwa."
 	case "m.mei":
 		return "[A1111] Meina v6 txt2img. Cutesy anime-style. 2x slower than Fuwa."
-	case "m.fwt":
-		return "[A1111] Fuwa v7 txt2img. Stable cutesy anime-style, vibrant colors."
 	case "m.fws":
 		return "[A1111] Fuwa v7 txt2img. Super stable cutesy anime-style, vibrant colors."
 	case "m.fwa":
 		return "[A1111] Fuwa v7 txt2img. Stable clean anime-style, better anatomy."
+	case "m.fwt":
+		return "[A1111] Fuwa v7 txt2img. Stable cutesy anime-style, vibrant colors."
 	case "bluff":
 		return "[A1111] Next generation outputs bluff image."
 	case "z.zit", "img":

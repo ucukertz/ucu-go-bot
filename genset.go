@@ -82,7 +82,7 @@ var GenDens = map[string]GenDen{
 	"9": {name: "unrecognizable", strength: 0.9},
 }
 
-const MAX_USERPIC = 3
+const MAX_USERPIC = 5
 
 type GenUserConfig struct {
 	Bluff   bool
@@ -259,7 +259,7 @@ func GenCmdChk(msg *events.Message, cmd string) bool {
 
 	if strings.HasPrefix(cmd, "!pic") {
 		pic := WaMsgMedia(msg)
-		if pic == nil {
+		if pic == nil && !strings.HasSuffix(cmd, "0") {
 			pic = WaMsgMediaQuoted(msg)
 			if pic == nil {
 				WaReplyText(msg, "No image to set ☹️")
@@ -285,6 +285,7 @@ func GenCmdChk(msg *events.Message, cmd string) bool {
 				return true
 			}
 			GenSetPic(msg, num, pic)
+			WaReplyText(msg, fmt.Sprintf("Pic%d is set 🫶", num))
 		}
 		return true
 	}
