@@ -173,7 +173,7 @@ func CurZeta(msg *events.Message) {
 }
 
 func GachaRoll(msg *events.Message) {
-	go GachaTokke(msg)
+	// go GachaTokke(msg)
 }
 
 func Gacur(msg *events.Message) {

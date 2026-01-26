@@ -228,11 +228,9 @@ func HugWai(msg *events.Message, cmd string) {
 	w, h := PicExpandLow(reso.Width, reso.Height, 1024)
 	w, h = Pic2DSnap16(w, h)
 
-	pospos := strings.ReplaceAll(xbpostpos_default, "BREAK", "")
-
 	rsp, err := s.Do("/generate",
-		query+", "+pospos,
-		strings.ReplaceAll(xbpostneg_default, "BREAK", ""),
+		"masterpiece, best quality, amazing quality, "+query,
+		"bad quality, worst quality, worst detail, sketch, censor",
 		GachaRand64(1, 1e7),
 		w,
 		h,
@@ -258,7 +256,7 @@ func HugWai(msg *events.Message, cmd string) {
 	}
 
 	t_all := time.Since(t_start).Round(time.Second)
-	caption := fmt.Sprintf("%ss\nv%s", t_all, v)
+	caption := fmt.Sprintf("%s\nv%s", t_all, v)
 	WaReplyImg(msg, img, caption)
 }
 
