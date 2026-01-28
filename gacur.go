@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"math/rand/v2"
 	"os"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/ucukertz/hfs"
 	"go.mau.fi/whatsmeow/types/events"
 )
 
@@ -23,11 +25,15 @@ func GachaTokke(msg *events.Message) {
 	}
 
 	roll := GachaRand64(0, 1000)
-	if roll > 25 {
+	if roll > 10 {
 		return
 	}
 
-	hint := "Respond to user messages with two sentences at most. Be as memey as possible."
+	hint := `Respond to user messages as memey and brief as possible. 
+	Don't reiterate user's message. Put it in a json. 
+	prompt [natural language prompt to generate the meme picture], top [top text]. bot [bottom text]. 
+	Answer purely with the json, no code blocks.`
+
 	aians, err := ChatGaiOneText(WaMsgStr(msg), hint)
 	if err != nil {
 		if strings.Contains(err.Error(), "overload") {
@@ -38,19 +44,27 @@ func GachaTokke(msg *events.Message) {
 		return
 	}
 	log.Debug().Str("aians", aians).Msg("TOKKE")
-	if len(strings.Split(aians, ".")) > 2 {
-		aians = strings.Split(aians, ".")[0]
+
+	var ais struct {
+		P string `json:"prompt"`
+		T string `json:"top"`
+		B string `json:"bot"`
 	}
 
-	r, err := HttpcBase().R().
-		SetBody(map[string]any{"text": aians, "safe": true, "redirect": true}).
-		Post(ENV_BASEURL_MEMEGEN)
+	if err := json.Unmarshal([]byte(aians), &ais); err != nil {
+		WaReact(msg, "😭")
+	}
+
+	query := "Meme of " + ais.P + ". Top text '" + ais.T + "'. Bottom text '" + ais.B + "'."
+	img, err := hfs.NewHfs[any, any]("mrfakename-z-image-turbo").
+		WithBearerToken(ENV_TOKEN_HUGGING).
+		WithTimeout(HFS_TIMEOUT).
+		DoFD("/generate_image", query, 1024, 1024, 9, 42, true)
 	if err != nil {
-		WaReplyText(msg, aians)
-		return
+		WaReact(msg, "😢")
 	}
 
-	WaReplyImg(msg, r.Body(), "")
+	WaReplyImg(msg, img, "")
 }
 
 var CurHeheEnd time.Time
@@ -173,7 +187,7 @@ func CurZeta(msg *events.Message) {
 }
 
 func GachaRoll(msg *events.Message) {
-	// go GachaTokke(msg)
+	go GachaTokke(msg)
 }
 
 func Gacur(msg *events.Message) {

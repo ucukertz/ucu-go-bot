@@ -56,7 +56,7 @@ func MenuImgz() string {
 		"*!z.tag* Get booru tags for an image",
 		"",
 		"*Legacy Stable Diffusion*",
-		"*!sxl* Stable Diffusion XL",
+		"*!l.sxl* Stable Diffusion XL",
 	}, "\n")
 }
 
@@ -71,6 +71,11 @@ func MenuImge() string {
 		"*Specialized editing*",
 		"!*z.qma* Qwen Many Angles",
 		"!*z.rbg* Remove background",
+		"",
+		"_Utilities_",
+		"*!reso* Set custom resolution (qie)",
+		"*!resos* Show resolution choices (qie)",
+		"*!picN* Multi image input (qie)",
 	}, "\n")
 }
 
@@ -90,20 +95,12 @@ func MenuWhat(query string) string {
 		return "[A1111] Fuwa v7 txt2img. Stable clean anime-style, better anatomy."
 	case "m.fwt":
 		return "[A1111] Fuwa v7 txt2img. Stable cutesy anime-style, vibrant colors."
-	case "bluff":
-		return "[A1111] Next generation outputs bluff image."
 	case "z.zit", "img":
 		return "Z-Image Turbo txt2img. General purpose image gen with natural language."
 	case "z.wai":
 		return "Wai Illus v12-16 txt2img. Most popular public booru SDXL model. You can choose v12-16 (ex: !z.wai.15)."
 	case "z.tag":
 		return "Get booru tags for an image."
-	case "reso":
-		return "[IMG] Set custom resolution for image generation."
-	case "den":
-		return "[IMG] Set denoise strength for image generation."
-	case "seed":
-		return "[IMG] Send only `!i.seed` to toggle seed randomness. Send `!i.seed <number>` to set a specific seed."
 	case "z.qie":
 		return "Qwen Image Edit img2img. Natural language editing. Supports multiple input images. Use `!qie.r` to use custom resolution."
 	case "m.flx":
@@ -112,6 +109,16 @@ func MenuWhat(query string) string {
 		return "Qwen Many Angles img2img. Get different camera angles by setting rotation, elevation, distance."
 	case "z.rbg":
 		return "Remove background from image. Very fast."
+	case "reso":
+		return "[IMG] Set custom resolution for image generation. `!resos` for choices."
+	case "den":
+		return "[IMG] Set denoise strength for image generation. `!dens` for choices."
+	case "seed":
+		return "[IMG] Send only `!i.seed` to toggle seed randomness. Send `!i.seed <number>` to set a specific seed."
+	case "pic":
+		return "`!picN` set an image for multiple image input (N=Pic number, 0 for clear)"
+	case "bluff":
+		return "[A1111] Next generation outputs bluff image."
 	case "l.sxl":
 		return "Stable Diffusion XL txt2img."
 	case "what":
