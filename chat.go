@@ -228,10 +228,6 @@ func ChatCmdChk(msg *events.Message, cmd string) bool {
 	case AdminDevDiff("!x.flx", "!m.flx"):
 		go ChatKontext(msg)
 		return true
-	case AdminDevDiff("!xcai", "!cai"):
-		WaReplyText(msg, "Sorry, deprecated. Use !ai instead. Falling back to !ai. Will be removed soon.")
-		go ChatGaiConvo(msg)
-		return true
 	}
 
 	return false

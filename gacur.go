@@ -29,8 +29,8 @@ func GachaTokke(msg *events.Message) {
 		return
 	}
 
-	hint := `Respond to user messages as memey and brief as possible. 
-	Don't reiterate user's message. Put it in a json. 
+	hint := `Respond to user messages with a meme. Be as memey and brief as possible. 
+	The meme text must be completely different compared to user's message. Put it in a json. 
 	prompt [natural language prompt to generate the meme picture], top [top text]. bot [bottom text]. 
 	Answer purely with the json, no code blocks.`
 
