@@ -12,10 +12,12 @@ func MenuTop() string {
 		"*Ucukertz WA bot*",
 		"*!ai* Gemini",
 		"*!img* Z-Image Turbo [ZeroGPU]",
+		"",
+		"_Advanced menu_",
 		"*!img.z* Image gen with ZeroGPU",
 		"*!img.m* Image gen with Modal",
 		"*!img.e* Image editing",
-
+		"",
 		"*!what* More explanation for commands (ex: '!what ai')",
 	}, "\n")
 }
@@ -69,8 +71,8 @@ func MenuImge() string {
 		"*!m.flx* Flux Kontext",
 		"",
 		"*Specialized editing*",
-		"!*z.qma* Qwen Many Angles",
-		"!*z.rbg* Remove background",
+		"*!z.qma* Qwen Many Angles",
+		"*!z.rbg* Remove background",
 		"",
 		"_Utilities_",
 		"*!reso* Set custom resolution (qie)",
@@ -83,8 +85,6 @@ func MenuWhat(query string) string {
 	switch query {
 	case "ai":
 		return "Gemini, ask anything. Can process pictures and documents."
-	case "cai":
-		return "[DEPRECATED] ChatGPT, Use !ai instead."
 	case "m.wai":
 		return "[A1111] Waifu v5 txt2img. Anime-style. Booru average style for chars. 2x slower than Fuwa."
 	case "m.mei":
@@ -121,6 +121,8 @@ func MenuWhat(query string) string {
 		return "[A1111] Next generation outputs bluff image."
 	case "l.sxl":
 		return "Stable Diffusion XL txt2img."
+	case "img.z", "img.m", "img.e":
+		return "Just send the command please."
 	case "what":
 		return "*U wot m8?*"
 	default:

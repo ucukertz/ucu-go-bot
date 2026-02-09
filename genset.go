@@ -242,8 +242,8 @@ func GenCmdChk(msg *events.Message, cmd string) bool {
 		return true
 	case "!seed":
 		var seed int64 = ucfg.Seed
-		qry := WaMsgPrompt(msg)
-		if parsed, err := strconv.ParseInt(qry, 10, 64); err == nil {
+		prompt := WaMsgPrompt(msg)
+		if parsed, err := strconv.ParseInt(prompt, 10, 64); err == nil {
 			seed = parsed
 			WaReact(msg, "🔒")
 		} else if seed == -1 {

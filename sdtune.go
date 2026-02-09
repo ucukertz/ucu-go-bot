@@ -114,17 +114,17 @@ func SdEdge(edge string, amp float32, pow int) string {
 }
 
 func SdTune(msg *events.Message) {
-	qry := WaMsgPrompt(msg)
+	prompt := WaMsgPrompt(msg)
 	pow := int(lo.RandomString(1, lo.AllCharset)[0])
-	cube := SdCube(qry, pow)
+	cube := SdCube(prompt, pow)
 	WaReplyText(msg, fmt.Sprintf("[%d] %s", pow, cube))
 }
 
 var SdBaker = 0
 
 func SdBake(msg *events.Message) {
-	qry := WaMsgPrompt(msg)
-	baking, err := strconv.Atoi(qry)
+	prompt := WaMsgPrompt(msg)
+	baking, err := strconv.Atoi(prompt)
 	if err != nil {
 		WaReact(msg, "❌")
 		return
@@ -134,7 +134,7 @@ func SdBake(msg *events.Message) {
 }
 
 func SdTake(msg *events.Message) {
-	qry := WaMsgPrompt(msg)
-	box := SdBox(qry, SdBaker)
+	prompt := WaMsgPrompt(msg)
+	box := SdBox(prompt, SdBaker)
 	WaReplyText(msg, box)
 }

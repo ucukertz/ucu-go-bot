@@ -25,17 +25,22 @@ type hugLegacyModel struct {
 }
 
 func HugZit(msg *events.Message) {
+	prompt := WaMsgPrompt(msg)
+	if len(prompt) == 0 {
+		WaReplyText(msg, "Prompt where?")
+		return
+	}
+
 	s := hfs.NewHfs[any, any]("mrfakename-z-image-turbo").
 		WithBearerToken(ENV_TOKEN_HUGGING).
 		WithTimeout(HFS_TIMEOUT)
 	log.Info().Msg("HUG ZIT start")
 
-	query := WaMsgPrompt(msg)
 	t_start := time.Now()
 
 	ucfg := GenGet(msg)
 	reso := ucfg.Reso
-	img, err := s.DoFD("/generate_image", query, reso.Height, reso.Width, 9, 42, true)
+	img, err := s.DoFD("/generate_image", prompt, reso.Height, reso.Width, 9, 42, true)
 	if err != nil {
 		WaSaad(msg, err)
 		return
@@ -47,6 +52,12 @@ func HugZit(msg *events.Message) {
 }
 
 func HugQie(msg *events.Message, cmd string) {
+	prompt := WaMsgPrompt(msg)
+	if len(prompt) == 0 {
+		WaReplyText(msg, "Prompt where?")
+		return
+	}
+
 	s := hfs.NewHfs[any, any]("linoyts-qwen-image-edit-2511-fast").
 		WithBearerToken(ENV_TOKEN_HUGGING).
 		WithTimeout(HFS_TIMEOUT)
@@ -84,7 +95,6 @@ func HugQie(msg *events.Message, cmd string) {
 		}
 	}
 
-	query := WaMsgPrompt(msg)
 	log.Info().Msg("HUG QIE start")
 	t_start := time.Now()
 
@@ -99,7 +109,7 @@ func HugQie(msg *events.Message, cmd string) {
 
 	rsp, err := s.Do("/infer",
 		iimgarr,
-		query,
+		prompt,
 		42,
 		true,
 		1,
@@ -197,11 +207,15 @@ func HugQma(msg *events.Message, cmd string) {
 }
 
 func HugWai(msg *events.Message, cmd string) {
+	prompt := WaMsgPrompt(msg)
+	if len(prompt) == 0 {
+		WaReplyText(msg, "Prompt where?")
+		return
+	}
+
 	s := hfs.NewHfsRaw[any, any]("https://ibarakidouji-wai-nsfw-illustrious-sdxl.hf.space/call").
 		WithBearerToken(ENV_TOKEN_HUGGING).
 		WithTimeout(HFS_TIMEOUT)
-
-	query := WaMsgPrompt(msg)
 
 	v := "16"
 	// Take string after last dot, use as version if integer
@@ -229,7 +243,7 @@ func HugWai(msg *events.Message, cmd string) {
 	w, h = Pic2DSnap16(w, h)
 
 	rsp, err := s.Do("/generate",
-		"masterpiece, best quality, amazing quality, "+query,
+		"masterpiece, best quality, amazing quality, "+prompt,
 		"bad quality, worst quality, worst detail, sketch, censor",
 		GachaRand64(1, 1e7),
 		w,

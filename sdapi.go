@@ -71,6 +71,12 @@ var SdCkpts = map[string]SdCkpt{
 }
 
 func SdApi(msg *events.Message, cmd string) {
+	prompt := WaMsgPrompt(msg)
+	if len(prompt) == 0 {
+		WaReplyText(msg, "Prompt where?")
+		return
+	}
+
 	ucfg := GenGet(msg)
 
 	bluff := ucfg.Bluff
@@ -175,6 +181,12 @@ func SdApi(msg *events.Message, cmd string) {
 }
 
 func SdUpscale(msg *events.Message, cmd string) {
+	prompt := WaMsgPrompt(msg)
+	if len(prompt) == 0 {
+		WaReplyText(msg, "Prompt where?")
+		return
+	}
+
 	cmd = strings.TrimSuffix(cmd, ".up")
 	ckpt, ok := SdCkpts[cmd]
 	if !ok {

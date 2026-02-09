@@ -33,8 +33,8 @@ func AdminCmdChk(msg *events.Message, cmd string) bool {
 		WaReplyText(msg, stats)
 		return true
 	case "!a.log":
-		query := WaMsgPrompt(msg)
-		newlvl := LoggerSetLvl(query, 24*time.Hour)
+		prompt := WaMsgPrompt(msg)
+		newlvl := LoggerSetLvl(prompt, 24*time.Hour)
 		WaReplyText(msg, fmt.Sprintf("Log level set to %s for 24 hours", newlvl))
 		return true
 	case "!a.tune":
