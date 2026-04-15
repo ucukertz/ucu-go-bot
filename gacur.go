@@ -34,7 +34,7 @@ func GachaTokke(msg *events.Message) {
 	prompt [natural language prompt to generate the meme picture], top [top text]. bot [bottom text]. 
 	Answer purely with the json, no code blocks.`
 
-	aians, err := ChatGaiOneText(WaMsgStr(msg), hint)
+	aians, err := ChatGaiTextOnce(msg, WaMsgStr(msg), hint)
 	if err != nil {
 		if strings.Contains(err.Error(), "overload") {
 			WaReact(msg, "🤕")

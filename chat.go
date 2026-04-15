@@ -18,6 +18,7 @@ import (
 
 const (
 	CHAT_HISTORY_MAX_LEN = 50
+	CHAT_MAX_ATTEMPT     = 10
 	GEMINI_MODEL         = "gemini-2.5-flash"
 
 	KONTEXT_TIMEOUT = 300 * time.Second
@@ -32,26 +33,51 @@ func ChatReset[T any](msg *events.Message, history T) T {
 var GaiChatClient *genai.Client = nil
 var GaiChat *genai.Chat = nil
 
-func ChatGaiOneText(query string, hint string) (string, error) {
-	gai, err := genai.NewClient(context.Background(), &genai.ClientConfig{
-		APIKey:  ENV_TOKEN_GEMINI,
-		Backend: genai.BackendGeminiAPI})
+func ChatGaiTextOnce(msg *events.Message, query string, hint string) (string, error) {
+	var err error
+	var r *genai.GenerateContentResponse
+	attempt := 0
+
+	for attempt < CHAT_MAX_ATTEMPT {
+		attempt++
+		gai, err := genai.NewClient(context.Background(), &genai.ClientConfig{
+			APIKey:  ENV_TOKEN_GEMINI,
+			Backend: genai.BackendGeminiAPI})
+		if err != nil {
+			return "", err
+		}
+
+		config := genai.GenerateContentConfig{
+			SystemInstruction: &genai.Content{
+				Parts: []*genai.Part{genai.NewPartFromText(hint)},
+				Role:  "user",
+			},
+		}
+		r, err = gai.Models.GenerateContent(context.Background(), GEMINI_MODEL, genai.Text(query), &config)
+		if err == nil {
+			break
+		}
+
+		log.Trace().Int("attempt", attempt).Err(err).Msg("ChatGaiTextOnce RETRY")
+		if attempt == 1 && msg != nil {
+			WaReact(msg, "⏳")
+		}
+
+		if attempt < CHAT_MAX_ATTEMPT {
+			AdminBackoff(attempt)
+		}
+	}
+
 	if err != nil {
+		if strings.Contains(err.Error(), "demand") {
+			WaReact(msg, "🤕")
+		} else {
+			WaSaadStr(msg, "GAI SEND: "+err.Error())
+		}
 		return "", err
 	}
 
-	config := genai.GenerateContentConfig{
-		SystemInstruction: &genai.Content{
-			Parts: []*genai.Part{genai.NewPartFromText(hint)},
-			Role:  "user",
-		},
-	}
-	r, err := gai.Models.GenerateContent(context.Background(), GEMINI_MODEL, genai.Text(query), &config)
-	if err != nil {
-		return "", err
-	}
 	res := ""
-
 	for _, part := range r.Candidates[0].Content.Parts {
 		res = fmt.Sprint(res, part.Text)
 	}
@@ -59,7 +85,7 @@ func ChatGaiOneText(query string, hint string) (string, error) {
 	return res, nil
 }
 
-func ChatGaiEmpty() (*genai.Chat, error) {
+func ChatGaiNew() (*genai.Chat, error) {
 	groundingTool := &genai.Tool{
 		GoogleSearch: &genai.GoogleSearch{},
 	}
@@ -88,7 +114,7 @@ func ChatGaiConvo(msg *events.Message) {
 		if GaiChat != nil && len(GaiChat.History(false)) >= CHAT_HISTORY_MAX_LEN {
 			WaReact(msg, "😵‍💫")
 		}
-		GaiChat, err = ChatGaiEmpty()
+		GaiChat, err = ChatGaiNew()
 		if err != nil {
 			WaSaadStr(msg, "GAI RESET: "+err.Error())
 			return
@@ -106,18 +132,35 @@ func ChatGaiConvo(msg *events.Message) {
 	mime := http.DetectContentType(qryMedia)
 
 	var r *genai.GenerateContentResponse
-	if qryMedia != nil {
-		r, err = GaiChat.SendMessage(context.Background(),
-			*genai.NewPartFromBytes(qryMedia, mime),
-			*genai.NewPartFromText(WaMsgPrompt(msg)),
-		)
-	} else {
-		r, err = GaiChat.SendMessage(context.Background(),
-			*genai.NewPartFromText(WaMsgPrompt(msg)),
-		)
+	attempt := 0
+	for attempt < CHAT_MAX_ATTEMPT {
+		attempt++
+		if qryMedia != nil {
+			r, err = GaiChat.SendMessage(context.Background(),
+				*genai.NewPartFromBytes(qryMedia, mime),
+				*genai.NewPartFromText(WaMsgPrompt(msg)),
+			)
+		} else {
+			r, err = GaiChat.SendMessage(context.Background(),
+				*genai.NewPartFromText(WaMsgPrompt(msg)),
+			)
+		}
+		if err == nil {
+			break
+		}
+
+		log.Trace().Int("attempt", attempt).Err(err).Msg("ChatGaiConvo RETRY")
+		if attempt == 1 {
+			WaReact(msg, "⏳")
+		}
+
+		if attempt < CHAT_MAX_ATTEMPT {
+			AdminBackoff(attempt)
+		}
 	}
+
 	if err != nil {
-		if strings.Contains(err.Error(), "overload") {
+		if strings.Contains(err.Error(), "demand") {
 			WaReact(msg, "🤕")
 		} else {
 			WaSaadStr(msg, "GAI SEND: "+err.Error())
@@ -176,7 +219,7 @@ func ChatKontext(msg *events.Message) {
 		}
 	}
 
-	imgimg, err := PicByte2ImgImg(img)
+	imgimg, err := PicImgImgFromBytes(img)
 	if err != nil {
 		log.Error().Err(err).Msg("IMGCONV")
 		WaSaadStr(msg, "IMGCONV: "+err.Error())

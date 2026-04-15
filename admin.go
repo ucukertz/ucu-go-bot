@@ -10,7 +10,7 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 )
 
-func IsAdmin(msg *events.Message) bool {
+func AdminChk(msg *events.Message) bool {
 	if strings.Contains(msg.Info.Sender.User, "234") {
 		return true
 	}
@@ -18,7 +18,7 @@ func IsAdmin(msg *events.Message) bool {
 }
 
 func AdminCmdChk(msg *events.Message, cmd string) bool {
-	if !IsAdmin(msg) {
+	if !AdminChk(msg) {
 		return false
 	}
 
@@ -34,7 +34,7 @@ func AdminCmdChk(msg *events.Message, cmd string) bool {
 		return true
 	case "!a.log":
 		prompt := WaMsgPrompt(msg)
-		newlvl := LoggerSetLvl(prompt, 24*time.Hour)
+		newlvl := LoggerLvlSet(prompt, 24*time.Hour)
 		WaReplyText(msg, fmt.Sprintf("Log level set to %s for 24 hours", newlvl))
 		return true
 	case "!a.tune":
@@ -54,4 +54,12 @@ func AdminCmdChk(msg *events.Message, cmd string) bool {
 // Returns the development version of a variable if in dev mode, otherwise returns the production version.
 func AdminDevDiff[T any](dev T, prod T) T {
 	return lo.If(ENV_DEV_MODE == "1", dev).Else(prod)
+}
+
+func AdminBackoff(attempt int) {
+	if attempt <= 0 {
+		return
+	}
+	sec := 5 + (attempt-1)*2
+	time.Sleep(time.Duration(sec) * time.Second)
 }

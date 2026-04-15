@@ -18,7 +18,7 @@ const (
 	PIC_RESO_2k  = 2048
 )
 
-func PicByte2ImgImg(b []byte) (image.Image, error) {
+func PicImgImgFromBytes(b []byte) (image.Image, error) {
 	imgimg, _, err := image.Decode(bytes.NewReader(b))
 	if err == nil {
 		return imgimg, nil
@@ -54,14 +54,14 @@ func PicSnap16(n int) int {
 	return n - remainder
 }
 
-func Pic2DSnap16(w, h int) (int, int) {
+func Pic2dSnap16(w, h int) (int, int) {
 	return PicSnap16(w), PicSnap16(h)
 }
 
-// PicAdjustReso calculates new dimensions (w, h) such that their total pixel count
+// PicResoAdjust calculates new dimensions (w, h) such that their total pixel count
 // is close to target*target, while preserving aspect ratio.
 // All inputs and outputs are snapped to the nearest multiple of 16 (AI friendly).
-func PicAdjustReso(w, h, target int) (int, int) {
+func PicResoAdjust(w, h, target int) (int, int) {
 	targetSnapped := PicSnap16(target)
 	targetArea := float64(targetSnapped * targetSnapped)
 

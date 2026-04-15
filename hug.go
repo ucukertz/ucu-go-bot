@@ -100,11 +100,11 @@ func HugQie(msg *events.Message, cmd string) {
 
 	const max_reso_dim = 1168
 	reso := ucfg.Reso
-	target_w, target_h := PicAdjustReso(reso.Width, reso.Height, max_reso_dim)
+	target_w, target_h := PicResoAdjust(reso.Width, reso.Height, max_reso_dim)
 
 	if !strings.HasSuffix(cmd, ".r") {
-		imgimg, _ := PicByte2ImgImg(firstImg)
-		target_w, target_h = PicAdjustReso(imgimg.Bounds().Dx(), imgimg.Bounds().Dy(), max_reso_dim)
+		imgimg, _ := PicImgImgFromBytes(firstImg)
+		target_w, target_h = PicResoAdjust(imgimg.Bounds().Dx(), imgimg.Bounds().Dy(), max_reso_dim)
 	}
 
 	rsp, err := s.Do("/infer",
@@ -189,8 +189,8 @@ func HugQma(msg *events.Message, cmd string) {
 		return
 	}
 
-	imgimg, _ := PicByte2ImgImg(iimg)
-	w, h := PicAdjustReso(imgimg.Bounds().Dx(), imgimg.Bounds().Dy(), PIC_RESO_1k)
+	imgimg, _ := PicImgImgFromBytes(iimg)
+	w, h := PicResoAdjust(imgimg.Bounds().Dx(), imgimg.Bounds().Dy(), PIC_RESO_1k)
 
 	s := hfs.NewHfs[any, any]("multimodalart-qwen-image-multiple-angles-3d-camera").
 		WithBearerToken(ENV_TOKEN_HUGGING).
@@ -240,7 +240,7 @@ func HugWai(msg *events.Message, cmd string) {
 	reso := ucfg.Reso
 
 	w, h := PicExpandLow(reso.Width, reso.Height, 1024)
-	w, h = Pic2DSnap16(w, h)
+	w, h = Pic2dSnap16(w, h)
 
 	rsp, err := s.Do("/generate",
 		"masterpiece, best quality, amazing quality, "+prompt,

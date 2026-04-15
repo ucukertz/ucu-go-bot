@@ -15,7 +15,7 @@ func LoggerInit() {
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 }
 
-func LoggerStr2Lvl(s string) zerolog.Level {
+func LoggerLvlFromStr(s string) zerolog.Level {
 	notfound := zerolog.TraceLevel
 	switch s[0] {
 	case 'T', 't':
@@ -59,8 +59,8 @@ func logResetter(dr time.Duration) {
 	logResetterExist = false
 }
 
-func LoggerSetLvl(newlvl string, duration time.Duration) string {
-	nlvl := LoggerStr2Lvl(newlvl)
+func LoggerLvlSet(newlvl string, duration time.Duration) string {
+	nlvl := LoggerLvlFromStr(newlvl)
 	log.Info().Msgf("Setting log level to %s", nlvl.String())
 	zerolog.SetGlobalLevel(nlvl)
 	go logResetter(duration)

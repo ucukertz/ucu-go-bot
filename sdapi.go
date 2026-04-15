@@ -220,7 +220,7 @@ func SdUpscale(msg *events.Message, cmd string) {
 		}
 	}
 
-	imgimg, err := PicByte2ImgImg(img)
+	imgimg, err := PicImgImgFromBytes(img)
 	if err != nil {
 		WaSaad(msg, err)
 		return

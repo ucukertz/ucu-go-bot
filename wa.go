@@ -75,8 +75,8 @@ type WaUploadedImage struct {
 	thumbupr whatsmeow.UploadResponse
 }
 
-func WaImageUpload(img []byte) (WaUploadedImage, error) {
-	imgimg, err := PicByte2ImgImg(img)
+func WaImgUpload(img []byte) (WaUploadedImage, error) {
+	imgimg, err := PicImgImgFromBytes(img)
 	if err != nil {
 		return WaUploadedImage{}, fmt.Errorf("IMGCONV: %w", err)
 	}
@@ -117,7 +117,7 @@ func WaImageUpload(img []byte) (WaUploadedImage, error) {
 	return OkUpload, nil
 }
 
-func WaImageBuildE2e(isReply bool, upi WaUploadedImage, caption string, msg *events.Message) (*waE2E.Message, error) {
+func WaImgBuildE2e(isReply bool, upi WaUploadedImage, caption string, msg *events.Message) (*waE2E.Message, error) {
 	if isReply && msg == nil {
 		return nil, fmt.Errorf("no message to reply to")
 	}
@@ -154,7 +154,7 @@ func WaImageBuildE2e(isReply bool, upi WaUploadedImage, caption string, msg *eve
 }
 
 func WaSendImg(chat types.JID, img []byte, caption string) {
-	up, err := WaImageUpload(img)
+	up, err := WaImgUpload(img)
 	if err != nil {
 		log.Error().Err(err).Msg("IMG")
 		return
@@ -164,7 +164,7 @@ func WaSendImg(chat types.JID, img []byte, caption string) {
 }
 
 func WaSendImgUp(chat types.JID, upi WaUploadedImage, caption string) {
-	e2e, err := WaImageBuildE2e(false, upi, caption, nil)
+	e2e, err := WaImgBuildE2e(false, upi, caption, nil)
 	if err != nil {
 		log.Error().Err(err).Msg("IMG BUILD")
 		return
@@ -180,14 +180,14 @@ func WaSendImgUp(chat types.JID, upi WaUploadedImage, caption string) {
 }
 
 func WaReplyImg(msg *events.Message, img []byte, caption string) {
-	up, err := WaImageUpload(img)
+	up, err := WaImgUpload(img)
 	if err != nil {
 		log.Error().Err(err).Msg("IMG")
 		WaReact(msg, "😢")
 		return
 	}
 
-	e2e, err := WaImageBuildE2e(true, up, caption, msg)
+	e2e, err := WaImgBuildE2e(true, up, caption, msg)
 	if err != nil {
 		log.Error().Err(err).Msg("IMG BUILD")
 		return
@@ -204,7 +204,7 @@ func WaReplyImg(msg *events.Message, img []byte, caption string) {
 	WaSendImgUp(msg.Info.Chat, up, caption)
 }
 
-func WaBuildVidE2e(isReply bool, upb WaUploadedBytes, msg *events.Message, caption string, gif bool) (*waE2E.Message, error) {
+func WaVidE2eBuild(isReply bool, upb WaUploadedBytes, msg *events.Message, caption string, gif bool) (*waE2E.Message, error) {
 	if isReply && msg == nil {
 		return nil, fmt.Errorf("no message to reply to")
 	}
@@ -251,7 +251,7 @@ func WaSendVid(chat types.JID, video []byte, caption string, gif bool) {
 }
 
 func WaSendVidUp(chat types.JID, upb WaUploadedBytes, caption string, gif bool) {
-	e2e, err := WaBuildVidE2e(false, upb, nil, caption, gif)
+	e2e, err := WaVidE2eBuild(false, upb, nil, caption, gif)
 	if err != nil {
 		log.Error().Err(err).Msg("VID BUILD")
 		return
@@ -279,7 +279,7 @@ func WaReplyVid(msg *events.Message, video []byte, caption string, gif bool) {
 		upr:  upr,
 	}
 
-	e2e, err := WaBuildVidE2e(true, upb, msg, caption, gif)
+	e2e, err := WaVidE2eBuild(true, upb, msg, caption, gif)
 	if err != nil {
 		log.Error().Err(err).Msg("VID BUILD")
 		return
@@ -351,7 +351,7 @@ func WaMsgPrompt(msg *events.Message) string {
 	return strings.Join(split, " ")
 }
 
-func WaE2eMedia(e2e *waE2E.Message) []byte {
+func WaMediaFromE2e(e2e *waE2E.Message) []byte {
 	if img := e2e.GetImageMessage(); img != nil {
 		res, err := meow.Download(context.Background(), img)
 		if err != nil {
@@ -385,7 +385,7 @@ func WaE2eMedia(e2e *waE2E.Message) []byte {
 
 func WaMsgMedia(msg *events.Message) []byte {
 	e2e := msg.Message
-	return WaE2eMedia(e2e)
+	return WaMediaFromE2e(e2e)
 }
 
 func WaMsgMediaQuoted(msg *events.Message) []byte {
@@ -397,10 +397,10 @@ func WaMsgMediaQuoted(msg *events.Message) []byte {
 		return nil
 	}
 
-	return WaE2eMedia(quoted)
+	return WaMediaFromE2e(quoted)
 }
 
-func cmdHandler(msg *events.Message) {
+func WaCmdHandle(msg *events.Message) {
 	cmd := strings.Split(WaMsgStr(msg), " ")[0]
 
 	if ok := SdCmdChk(msg, cmd); ok {
@@ -422,7 +422,7 @@ func cmdHandler(msg *events.Message) {
 	}
 }
 
-func eventHandler(evt any) {
+func WaEventHandler(evt any) {
 	switch v := evt.(type) {
 	case *events.Message:
 		if syncing {
@@ -439,7 +439,7 @@ func eventHandler(evt any) {
 			return
 		}
 
-		if ENV_DEV_MODE == "1" && !IsAdmin(v) {
+		if ENV_DEV_MODE == "1" && !AdminChk(v) {
 			log.Info().Str("user", WaMsgUser(v)).Msg("DEV MODE: Skipping message from user")
 			return
 		}
@@ -451,7 +451,7 @@ func eventHandler(evt any) {
 			Gacur(v)
 
 			if strings.HasPrefix(msgstr, "!") {
-				cmdHandler(v)
+				WaCmdHandle(v)
 			}
 		}
 
@@ -472,7 +472,7 @@ func WaInit() {
 	}
 	clientLog := waLog.Stdout("Client", "INFO", true)
 	meow = whatsmeow.NewClient(deviceStore, clientLog)
-	meow.AddEventHandler(eventHandler)
+	meow.AddEventHandler(WaEventHandler)
 
 	if meow.Store.ID == nil {
 		// No ID stored, new login
