@@ -322,6 +322,10 @@ func WaMsgUser(msg *events.Message) string {
 	return msg.Info.Sender.User
 }
 
+func WaMsgChat(msg *events.Message) string {
+	return msg.Info.Chat.User
+}
+
 func WaMsgStr(msg *events.Message) string {
 	if msg == nil {
 		return ""
@@ -447,7 +451,9 @@ func WaEventHandler(evt any) {
 		msgstr := WaMsgStr(v)
 		log.Debug().Str("from", v.Info.Sender.User).Str("msg", msgstr).Msg("Received a message!")
 
-		if len(WaMsgStr(v)) > 0 {
+		AdminFireReact(v, msgstr)
+
+		if len(msgstr) > 0 {
 			Gacur(v)
 
 			if strings.HasPrefix(msgstr, "!") {

@@ -63,3 +63,34 @@ func AdminBackoff(attempt int) {
 	sec := 5 + (attempt-1)*2
 	time.Sleep(time.Duration(sec) * time.Second)
 }
+
+var fireReactLastTime time.Time
+
+func AdminFireReact(msg *events.Message, text string) {
+	if !strings.Contains(text, "233222") {
+		return
+	}
+
+	now := time.Now().UTC()
+	var lastRecharge time.Time
+	y, m, d := now.Date()
+
+	t1 := time.Date(y, m, d, 2, 0, 0, 0, time.UTC)
+	t2 := time.Date(y, m, d, 7, 0, 0, 0, time.UTC)
+	t3 := time.Date(y, m, d, 12, 0, 0, 0, time.UTC)
+
+	if now.After(t3) || now.Equal(t3) {
+		lastRecharge = t3
+	} else if now.After(t2) || now.Equal(t2) {
+		lastRecharge = t2
+	} else if now.After(t1) || now.Equal(t1) {
+		lastRecharge = t1
+	} else {
+		lastRecharge = time.Date(y, m, d-1, 12, 0, 0, 0, time.UTC)
+	}
+
+	if fireReactLastTime.Before(lastRecharge) {
+		fireReactLastTime = now
+		WaReact(msg, "🔥")
+	}
+}
