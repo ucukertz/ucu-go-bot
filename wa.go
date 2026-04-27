@@ -451,7 +451,7 @@ func WaEventHandler(evt any) {
 		msgstr := WaMsgStr(v)
 		log.Debug().Str("from", v.Info.Sender.User).Str("msg", msgstr).Msg("Received a message!")
 
-		AdminFireReact(v, msgstr)
+		AdminFireReact(v, WaMsgChat(v))
 
 		if len(msgstr) > 0 {
 			Gacur(v)

@@ -213,7 +213,7 @@ func HugWai(msg *events.Message, cmd string) {
 		return
 	}
 
-	s := hfs.NewHfsRaw[any, any]("https://ibarakidouji-wai-nsfw-illustrious-sdxl.hf.space/call").
+	s := hfs.NewHfs[any, any]("ibarakidouji-wai-nsfw-illustrious-sdxl").
 		WithBearerToken(ENV_TOKEN_HUGGING).
 		WithTimeout(HFS_TIMEOUT)
 
@@ -248,14 +248,14 @@ func HugWai(msg *events.Message, cmd string) {
 		GachaRand64(1, 1e7),
 		w,
 		h,
-		7,
+		7.0,
 		28,
 		"Euler a",
 		"v"+v,
 		"Custom",
 		false,
-		0,
-		1,
+		0.55,
+		1.0,
 		false,
 	)
 	if err != nil {
