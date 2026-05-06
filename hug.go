@@ -379,7 +379,7 @@ func HugLegacy(msg *events.Message, model string, query string, attempt int) ([]
 			return nil, fmt.Errorf("HUG %s", r.Status())
 		}
 	}
-	return r.Body(), nil
+	return r.Bytes(), nil
 }
 
 func HuggingLegacy(msg *events.Message, model string, query string) {

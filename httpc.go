@@ -7,15 +7,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-resty/resty/v2"
+	"resty.dev/v3"
 	"github.com/samber/lo"
 )
 
 func HttpcBase() *resty.Client {
 	return resty.New().
-		OnBeforeRequest(HttpcMidwareBeforeReq).
-		OnSuccess(HttpcMidwareSuccess).
-		OnError(HttpcMidwareErr).
+		AddRequestMiddleware(HttpcMidwareBeforeReq).
+		AddResponseMiddleware(HttpcMidwareAfterRes).
+		SetResponseBodyUnlimitedReads(true).
 		EnableTrace()
 }
 
@@ -23,7 +23,7 @@ type HttpcCtxKey string
 
 func HttpcMidwareBeforeReq(c *resty.Client, r *resty.Request) error {
 	id := lo.RandomString(6, lo.LowerCaseLettersCharset)
-	fullUrl := c.BaseURL + r.URL
+	fullUrl := c.BaseURL() + r.URL
 	ctx := context.WithValue(r.Context(), HttpcCtxKey("ID"), id)
 	ctx = context.WithValue(ctx, HttpcCtxKey("URL"), fullUrl)
 	r.SetContext(ctx)
@@ -31,36 +31,38 @@ func HttpcMidwareBeforeReq(c *resty.Client, r *resty.Request) error {
 	return nil
 }
 
-func HttpcMidwareSuccess(c *resty.Client, r *resty.Response) {
+func HttpcMidwareAfterRes(c *resty.Client, r *resty.Response) error {
+	id := r.Request.Context().Value(HttpcCtxKey("ID")).(string)
+	if err := r.Err; err != nil {
+		url := r.Request.Context().Value(HttpcCtxKey("URL")).(string)
+		if v, ok := r.Request.Body.(string); ok {
+			log.Error().Err(err).Str("ID", id).Str("URL", url).Str("ReqBody", v).Msg("HTTPC err")
+		} else if v, ok := r.Request.Body.([]byte); ok {
+			log.Error().Err(err).Str("ID", id).Str("URL", url).Hex("ReqBody", v).Msg("HTTPC err")
+		} else {
+			log.Error().Err(err).Str("ID", id).Str("URL", url).Strs("ReqContent", r.Request.Header["Content-Type"]).Msg("HTTPC err")
+		}
+
+		if v, ok := err.(*resty.ResponseError); ok {
+			log.Error().Err(err).Str("ID", id).Bytes("ResBody", v.Response.Bytes()).Int("ResCode", v.Response.StatusCode()).Msg("HTTPC err")
+		}
+		return nil
+	}
+
 	ti := r.Request.TraceInfo()
 	took := fmt.Sprintf("%s", ti.TotalTime.Round(time.Millisecond))
-	id := r.Request.Context().Value(HttpcCtxKey("ID")).(string)
-	ResMime := http.DetectContentType(r.Body())
+	ResMime := http.DetectContentType(r.Bytes())
 	if strings.Contains(ResMime, "image") {
 		log.Trace().Str("ID", id).Int("ResCode", r.StatusCode()).Str("ResBody", "[[[IMAGE RESPONSE]]]").Str("Took", took).Msg("HTTPC end")
-		return
+		return nil
 	} else if strings.Contains(ResMime, "octet") {
 		log.Trace().Str("ID", id).Int("ResCode", r.StatusCode()).Str("ResBody", "[[[BINARY RESPONSE]]]").Str("Took", took).Msg("HTTPC end")
-		return
+		return nil
 	} else if strings.Contains(r.Request.URL, "sdapi") {
 		log.Trace().Str("ID", id).Int("ResCode", r.StatusCode()).Str("ResBody", "[[[SDAPI RESPONSE]]]").Str("Took", took).Msg("HTTPC end")
-		return
+		return nil
 	}
-	log.Trace().Str("ID", id).Int("ResCode", r.StatusCode()).Bytes("ResBody", r.Body()).Str("Took", took).Msg("HTTPC end")
+	log.Trace().Str("ID", id).Int("ResCode", r.StatusCode()).Bytes("ResBody", r.Bytes()).Str("Took", took).Msg("HTTPC end")
+	return nil
 }
 
-func HttpcMidwareErr(r *resty.Request, err error) {
-	id := r.Context().Value(HttpcCtxKey("ID")).(string)
-	url := r.Context().Value(HttpcCtxKey("URL")).(string)
-	if v, ok := r.Body.(string); ok {
-		log.Error().Err(err).Str("ID", id).Str("URL", url).Str("ReqBody", v).Msg("HTTPC err")
-	} else if v, ok := r.Body.([]byte); ok {
-		log.Error().Err(err).Str("ID", id).Str("URL", url).Hex("ReqBody", v).Msg("HTTPC err")
-	} else {
-		log.Error().Err(err).Str("ID", id).Str("URL", url).Strs("ReqContent", r.Header["Content-Type"]).Msg("HTTPC err")
-	}
-
-	if v, ok := err.(*resty.ResponseError); ok {
-		log.Error().Err(err).Str("ID", id).Bytes("ResBody", v.Response.Body()).Int("ResCode", v.Response.StatusCode()).Msg("HTTPC err")
-	}
-}

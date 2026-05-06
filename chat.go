@@ -187,7 +187,7 @@ func ChatGaiConvo(msg *events.Message) {
 				return
 			}
 			if strings.HasPrefix(part.FileData.MIMEType, "image/") {
-				WaReplyImg(msg, r.Body(), part.FileData.FileURI)
+				WaReplyImg(msg, r.Bytes(), part.FileData.FileURI)
 			} else {
 				WaSaadStr(msg, "GAI MIME FL: "+part.FileData.MIMEType)
 			}

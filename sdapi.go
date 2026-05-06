@@ -157,7 +157,7 @@ func SdApi(msg *events.Message, cmd string) {
 			}
 
 			var res SdImages
-			err = json.Unmarshal(r.Body(), &res)
+			err = json.Unmarshal(r.Bytes(), &res)
 			if err != nil {
 				WaSaad(msg, err)
 			}
@@ -275,7 +275,7 @@ func SdUpscale(msg *events.Message, cmd string) {
 			}
 
 			var res SdImages
-			err = json.Unmarshal(r.Body(), &res)
+			err = json.Unmarshal(r.Bytes(), &res)
 			if err != nil {
 				WaSaad(msg, err)
 			}
