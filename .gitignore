@@ -1,4 +1,6 @@
 .env
 wa-login.db
 scratch
-*.exe
+*.exe
+docs/
+
