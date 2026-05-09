@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"github.com/nfnt/resize"
-	"github.com/samber/lo"
+	"github.com/zendev-sh/goai"
+	"github.com/zendev-sh/goai/provider"
+	"github.com/zendev-sh/goai/provider/google"
 	"go.mau.fi/whatsmeow/types/events"
-	"google.golang.org/genai"
 )
 
 const (
@@ -24,38 +25,41 @@ const (
 	KONTEXT_TIMEOUT = 300 * time.Second
 )
 
-// Generic chat reset
-func ChatReset[T any](msg *events.Message, history T) T {
-	WaReplyText(msg, "No thoughts. Head's empty. 👍")
-	return lo.Empty[T]()
+// ChatNew creates a new empty message history
+func ChatNew() []provider.Message {
+	return []provider.Message{}
 }
 
-var GaiChatClient *genai.Client = nil
-var GaiChat *genai.Chat = nil
+// ChatReset clears the history and notifies the user
+func ChatReset(msg *events.Message) []provider.Message {
+	WaReplyText(msg, "No thoughts. Head's empty. 👍")
+	return ChatNew()
+}
+
+var GaiHistory []provider.Message = nil
 
 func ChatGaiTextOnce(msg *events.Message, query string, hint string) (string, error) {
 	var err error
-	var r *genai.GenerateContentResponse
 	attempt := 0
+	model := google.Chat(GEMINI_MODEL, google.WithAPIKey(ENV_TOKEN_GEMINI))
+	searchTool := google.Tools.GoogleSearch()
 
 	for attempt < CHAT_MAX_ATTEMPT {
 		attempt++
-		gai, err := genai.NewClient(context.Background(), &genai.ClientConfig{
-			APIKey:  ENV_TOKEN_GEMINI,
-			Backend: genai.BackendGeminiAPI})
-		if err != nil {
-			return "", err
-		}
 
-		config := genai.GenerateContentConfig{
-			SystemInstruction: &genai.Content{
-				Parts: []*genai.Part{genai.NewPartFromText(hint)},
-				Role:  "user",
-			},
-		}
-		r, err = gai.Models.GenerateContent(context.Background(), GEMINI_MODEL, genai.Text(query), &config)
+		result, gerr := goai.GenerateText(context.Background(), model,
+			goai.WithSystem(hint),
+			goai.WithPrompt(query),
+			goai.WithTools(goai.Tool{
+				Name:                   searchTool.Name,
+				ProviderDefinedType:    searchTool.ProviderDefinedType,
+				ProviderDefinedOptions: searchTool.ProviderDefinedOptions,
+			}),
+			goai.WithMaxSteps(5),
+		)
+		err = gerr
 		if err == nil {
-			break
+			return result.Text, nil
 		}
 
 		log.Trace().Int("attempt", attempt).Err(err).Msg("ChatGaiTextOnce RETRY")
@@ -69,82 +73,73 @@ func ChatGaiTextOnce(msg *events.Message, query string, hint string) (string, er
 	}
 
 	if err != nil {
-		if strings.Contains(err.Error(), "demand") {
-			WaReact(msg, "🤕")
-		} else {
-			WaSaadStr(msg, "GAI SEND: "+err.Error())
+		if msg != nil {
+			if strings.Contains(err.Error(), "demand") {
+				WaReact(msg, "🤕")
+			} else {
+				WaSaadStr(msg, "GAI SEND: "+err.Error())
+			}
 		}
 		return "", err
 	}
 
-	res := ""
-	for _, part := range r.Candidates[0].Content.Parts {
-		res = fmt.Sprint(res, part.Text)
-	}
-
-	return res, nil
-}
-
-func ChatGaiNew() (*genai.Chat, error) {
-	groundingTool := &genai.Tool{
-		GoogleSearch: &genai.GoogleSearch{},
-	}
-
-	config := &genai.GenerateContentConfig{
-		Tools: []*genai.Tool{groundingTool},
-	}
-
-	return GaiChatClient.Chats.Create(context.Background(), GEMINI_MODEL, config, nil)
+	return "", nil
 }
 
 func ChatGaiConvo(msg *events.Message) {
-	var err error
-	if GaiChatClient == nil {
-		GaiChatClient, err = genai.NewClient(context.Background(), &genai.ClientConfig{
-			APIKey:  ENV_TOKEN_GEMINI,
-			Backend: genai.BackendGeminiAPI,
-		})
-		if err != nil {
-			WaSaadStr(msg, "GAI CLI: "+err.Error())
-			return
-		}
-	}
-
-	if GaiChat == nil || len(GaiChat.History(false)) >= CHAT_HISTORY_MAX_LEN || WaMsgPrompt(msg) == "/reset" {
-		if GaiChat != nil && len(GaiChat.History(false)) >= CHAT_HISTORY_MAX_LEN {
+	if GaiHistory == nil || len(GaiHistory) >= CHAT_HISTORY_MAX_LEN || WaMsgPrompt(msg) == "/reset" {
+		if GaiHistory != nil && len(GaiHistory) >= CHAT_HISTORY_MAX_LEN {
 			WaReact(msg, "😵‍💫")
 		}
-		GaiChat, err = ChatGaiNew()
-		if err != nil {
-			WaSaadStr(msg, "GAI RESET: "+err.Error())
-			return
-		}
 		if WaMsgPrompt(msg) == "/reset" {
-			WaReplyText(msg, "No thoughts. Head's empty. 👍")
+			GaiHistory = ChatReset(msg)
 			return
 		}
+		GaiHistory = ChatNew()
 	}
 
 	qryMedia := WaMsgMedia(msg)
 	if qryMedia == nil {
 		qryMedia = WaMsgMediaQuoted(msg)
 	}
-	mime := http.DetectContentType(qryMedia)
 
-	var r *genai.GenerateContentResponse
+	prompt := WaMsgPrompt(msg)
+	userMsg := provider.Message{
+		Role:    provider.RoleUser,
+		Content: []provider.Part{{Type: provider.PartText, Text: prompt}},
+	}
+
+	if qryMedia != nil {
+		mime := http.DetectContentType(qryMedia)
+		userMsg.Content = append([]provider.Part{
+			{
+				Type:      provider.PartImage,
+				URL:       "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(qryMedia),
+				MediaType: mime,
+			},
+		}, userMsg.Content...)
+	}
+
+	GaiHistory = append(GaiHistory, userMsg)
+
+	var err error
+	var result *goai.TextResult
 	attempt := 0
+	model := google.Chat(GEMINI_MODEL, google.WithAPIKey(ENV_TOKEN_GEMINI))
+	searchTool := google.Tools.GoogleSearch()
+
 	for attempt < CHAT_MAX_ATTEMPT {
 		attempt++
-		if qryMedia != nil {
-			r, err = GaiChat.SendMessage(context.Background(),
-				*genai.NewPartFromBytes(qryMedia, mime),
-				*genai.NewPartFromText(WaMsgPrompt(msg)),
-			)
-		} else {
-			r, err = GaiChat.SendMessage(context.Background(),
-				*genai.NewPartFromText(WaMsgPrompt(msg)),
-			)
-		}
+		result, err = goai.GenerateText(context.Background(), model,
+			goai.WithMessages(GaiHistory...),
+			goai.WithTools(goai.Tool{
+				Name:                   searchTool.Name,
+				ProviderDefinedType:    searchTool.ProviderDefinedType,
+				ProviderDefinedOptions: searchTool.ProviderDefinedOptions,
+			}),
+			goai.WithMaxSteps(5),
+		)
+
 		if err == nil {
 			break
 		}
@@ -168,32 +163,9 @@ func ChatGaiConvo(msg *events.Message) {
 		return
 	}
 
-	res := ""
-	for _, part := range r.Candidates[0].Content.Parts {
-		if len(part.Text) > 0 {
-			res = fmt.Sprint(res, part.Text)
-		}
-		if part.InlineData != nil && len(part.InlineData.Data) > 0 {
-			if strings.HasPrefix(part.InlineData.MIMEType, "image/") {
-				WaReplyImg(msg, part.InlineData.Data, part.InlineData.DisplayName)
-			} else {
-				WaSaadStr(msg, "GAI MIME IN: "+part.InlineData.MIMEType)
-			}
-		}
-		if part.FileData != nil && len(part.FileData.FileURI) > 0 {
-			r, err := HttpcBase().R().Get(part.FileData.FileURI)
-			if err != nil {
-				WaSaadStr(msg, "GAI URL FL:"+err.Error())
-				return
-			}
-			if strings.HasPrefix(part.FileData.MIMEType, "image/") {
-				WaReplyImg(msg, r.Bytes(), part.FileData.FileURI)
-			} else {
-				WaSaadStr(msg, "GAI MIME FL: "+part.FileData.MIMEType)
-			}
-		}
-	}
+	GaiHistory = append(GaiHistory, result.ResponseMessages...)
 
+	res := result.Text
 	if len(res) > 0 {
 		WaReplyText(msg, res)
 	}
