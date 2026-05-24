@@ -25,15 +25,15 @@ func GachaTokke(msg *events.Message) {
 	}
 
 	roll := GachaRand64(0, 1000)
-	if roll > 10 {
+	if roll > 5 {
 		return
 	}
 
 	hint := `Respond to user message with a meme. Be as memey and brief as possible. 
 	Be creative with the image subject. Do not use any existing meme templates. 
-	Pick the most absurd meme text while still making sense in context with the user's message. 
+	Pick the most absurd meme text while still replying in the same context as user's message. 
 	The meme text must be completely different compared to user's message. 
-	The meme image must be coherent with the meme text. Put it in a json.
+	The meme image must be synergistic with the meme text. Put it in a json.
 	prompt [natural language prompt to generate the meme picture], top [top text]. bot [bottom text]. 
 	Answer purely with the json, no code blocks.`
 
