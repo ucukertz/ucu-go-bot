@@ -319,7 +319,7 @@ func WaSaadStr(msg *events.Message, sad string) {
 }
 
 func WaMsgUser(msg *events.Message) string {
-	sfxLen := 6
+	sfxLen := 12
 	if msg == nil {
 		return ""
 	}
@@ -336,10 +336,6 @@ func WaMsgUser(msg *events.Message) string {
 	} else {
 		user = msg.Info.Sender.User
 	}
-	log.Info().Str("addr_mode", string(msg.Info.AddressingMode)).
-		Str("sender", msg.Info.Sender.User).Str("sender_server", msg.Info.Sender.Server).
-		Str("senderalt", msg.Info.SenderAlt.User).Str("senderalt_server", msg.Info.SenderAlt.Server).
-		Bool("is_lid", isLID).Str("user", user).Msg("WaMsgUser")
 	if len(user) < sfxLen {
 		return user
 	}

@@ -89,7 +89,7 @@ func CurHehe(msg *events.Message) {
 		return regex.MatchString(str)
 	}
 
-	if ok := strings.Contains(msg.Info.Sender.String(), inmate); !ok {
+	if ok := strings.Contains(WaMsgUser(msg), inmate); !ok {
 		return
 	}
 	CurHeheScope = msg
@@ -132,7 +132,7 @@ func CurTehe(msg *events.Message) {
 		return regex.MatchString(str)
 	}
 
-	if ok := strings.Contains(msg.Info.Sender.String(), inmate); !ok {
+	if ok := strings.Contains(WaMsgUser(msg), inmate); !ok {
 		return
 	}
 	CurTeheScope = msg
@@ -164,7 +164,7 @@ func CurZeta(msg *events.Message) {
 		return
 	}
 
-	if ok := strings.Contains(msg.Info.Sender.String(), inmate); !ok {
+	if ok := strings.Contains(WaMsgUser(msg), inmate); !ok {
 		return
 	}
 	if strings.Contains(strings.ToLower(WaMsgStr(msg)), "zeta") {
