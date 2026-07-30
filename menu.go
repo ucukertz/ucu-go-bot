@@ -27,6 +27,8 @@ func MenuImgm() string {
 		"*Image gen with Modal*",
 		"",
 		"*Stable Diffusion*",
+		"*!m.hwn* Haiwan v1 Normal",
+		"*!m.hwr* Haiwan v1 Raw",
 		"*!m.fws* Fuwa v7 Super",
 		"*!m.fwa* Fuwa v7 Anthro",
 		"*!m.fwt* Fuwa v7 Turbo",
@@ -95,6 +97,10 @@ func MenuWhat(query string) string {
 		return "[A1111] Fuwa v7 txt2img. Stable clean anime-style, better anatomy."
 	case "m.fwt":
 		return "[A1111] Fuwa v7 txt2img. Stable cutesy anime-style, vibrant colors."
+	case "m.hwn":
+		return "[A1111] Haiwan v1 txt2img. Curated anime-style. Both booru and natural language understanding."
+	case "m.hwr":
+		return "[A1111] Haiwan v1 txt2img. Raw anime-style. Both booru and natural language understanding."
 	case "z.zit", "img":
 		return "Z-Image Turbo txt2img. General purpose image gen with natural language."
 	case "z.wai":

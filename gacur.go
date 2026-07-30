@@ -56,6 +56,7 @@ func GachaTokke(msg *events.Message) {
 
 	if err := json.Unmarshal([]byte(aians), &ais); err != nil {
 		WaReact(msg, "😭")
+		return
 	}
 
 	query := "Meme of " + ais.P + ". Top text '" + ais.T + "'. Bottom text '" + ais.B + "'."
@@ -65,6 +66,7 @@ func GachaTokke(msg *events.Message) {
 		DoFD("/generate_image", query, 1024, 1024, 9, 42, true)
 	if err != nil {
 		WaReact(msg, "😢")
+		return
 	}
 
 	WaReplyImg(msg, img, "")

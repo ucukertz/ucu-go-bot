@@ -58,16 +58,35 @@ func (ckpt *SdCkpt) AddPrompt(prepos string, postpos string, preneg string, post
 	return ckpt
 }
 
-var xbpostpos_default = "BREAK vibrant_colors, colorful, masterpiece, best quality, amazing quality, very aesthetic, absurdres, newest, "
-var xbpostneg_default = fmt.Sprintln("zombie, chibi, bald, bad anatomy, poorly drawn, deformed anatomy, deformed fingers, censored, mosaic_censoring, bar_censor, shota, white_pupils, empty_eyes, multicolored_hair," +
+var SdPostpos = "BREAK vibrant_colors, colorful, masterpiece, best quality, amazing quality, very aesthetic, absurdres, newest, "
+var SdPostneg = fmt.Sprintln("zombie, chibi, bald, bad anatomy, poorly drawn, deformed anatomy, deformed fingers, censored, mosaic_censoring, bar_censor, shota, white_pupils, empty_eyes, multicolored_hair," +
 	"BREAK lowres, (bad quality, worst quality:1.2), sketch, jpeg artifacts, censor, blurry, watermark, ")
+var AnPostneg = "worst quality, low quality, blurry, (censored, mosaic censoring, bar censor, artist name, watermark:1.2), (bad hands, missing fingers, fewer fingers, bad legs, missing legs, fewer legs, 6fingers, 3hands, 3legs, 6toes:1.1), sepia, text"
 
 var SdCkpts = map[string]SdCkpt{
-	"!m.wai": *new(SdCkpt).Create("wai").Sampling("", "", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
-	"!m.mei": *new(SdCkpt).Create("mei").Sampling("", "", 0, 0).AddPrompt("", xbpostpos_default, "", xbpostneg_default),
-	"!m.fwt": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt("", xbpostpos_default+SdTurbo, "", xbpostneg_default),
-	"!m.fws": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt(SdFws, xbpostpos_default+SdTurbo, "", xbpostneg_default),
-	"!m.fwa": *new(SdCkpt).Create("fuwa").Sampling("", "", 0, 0).AddPrompt(SdFwa, SdSugar+xbpostpos_default, "", xbpostneg_default),
+	"!m.wai": *new(SdCkpt).Create("wai").Sampling("", "", 0, 0).AddPrompt("", SdPostpos, "", SdPostneg),
+	"!m.mei": *new(SdCkpt).Create("mei").Sampling("", "", 0, 0).AddPrompt("", SdPostpos, "", SdPostneg),
+	"!m.fwt": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt("", SdPostpos+SdTurbo, "", SdPostneg),
+	"!m.fws": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt(SdFws, SdPostpos+SdTurbo, "", SdPostneg),
+	"!m.fwa": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt(SdFwa, SdSugar+SdPostpos+SdTurbo, "", SdPostneg),
+	"!m.hwn": *new(SdCkpt).Create("haiwan").Sampling("", "Normal", 16, 2).AddPrompt(AnHwn, Anturbo, "", AnPostneg),
+	"!m.hwr": *new(SdCkpt).Create("haiwan").Sampling("", "Normal", 16, 2).AddPrompt(AnHwr, Anturbo, "", AnPostneg),
+}
+
+func SdOverrideSettings(ckpt SdCkpt) map[string]any {
+	override := map[string]any{
+		"sd_model_checkpoint":      ckpt.name,
+		"CLIP_stop_at_last_layers": 2,
+		"forge_additional_modules": []string{},
+	}
+	if strings.Contains(ckpt.name, "haiwan") {
+		override["CLIP_stop_at_last_layers"] = 1
+		override["forge_additional_modules"] = []string{
+			"qwen_3_06b_base.safetensors",
+			"qwen_image_vae.safetensors",
+		}
+	}
+	return override
 }
 
 func SdApi(msg *events.Message, cmd string) {
@@ -144,7 +163,7 @@ func SdApi(msg *events.Message, cmd string) {
 			"width":             ucfg.Reso.Width,
 			"height":            ucfg.Reso.Height,
 			"seed":              seed,
-			"override_settings": map[string]any{"sd_model_checkpoint": ckpt.name, "CLIP_stop_at_last_layers": 2},
+			"override_settings": SdOverrideSettings(ckpt),
 		}
 		r, err := SdHttpc.R().SetBody(body).Post("/sdapi/v1/txt2img")
 		if err != nil {
@@ -262,7 +281,7 @@ func SdUpscale(msg *events.Message, cmd string) {
 			"seed":               seed,
 			"denoising_strength": ucfg.Denoise.strength,
 			"resize_mode":        0,
-			"override_settings":  map[string]any{"sd_model_checkpoint": ckpt.name, "CLIP_stop_at_last_layers": 2},
+			"override_settings":  SdOverrideSettings(ckpt),
 		}
 		r, err := SdHttpc.R().SetBody(body).Post("/sdapi/v1/img2img")
 		if err != nil {

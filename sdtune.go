@@ -84,6 +84,10 @@ var SdFws = SdBox("+e8C7eq28AO7+QP8/Oq3uq4B9vP8/O/37fv3Afbvuq77/QD3+QMA7+3z/LquA
 var SdFwa = SdBox("MjQ3LjA6NyYkKjPx5TgtLjM+JDgwLjPx5c8HFwoGEA==", 59)
 var SdSugar = SdBox("wwoM/vgJ9hAGDMM=", 105)
 
+var Anturbo = SdEdge("HCkkKBzoLzAtHSroJyotHOgx6+nt", 0.7, 69)
+var AnHwn = SdBox("8+f5+uv49u/r6euypufo+fv46vjr+bKm9Ov96/n6sqb56fX46+W9sqb86/j/pufr+fru6/rv6bKm7u/t7uX55/r7+Of67/X0sqauxvHv+uf09eX/+/Hv+vWypsbz9fjv8fv45+Xr9LLAt7S4r6b78vr456bq6/rn7/Lr6rKm+e7v9P+m+fHv9LI=", 122)
+var AnHwr = SdBox("Oi5AQTI/PTYyMDL57S4vQEI/MT8yQPntOzJEMkBB+e1AMDw/MiwE+e1DMj9G7S4yQEE1MkE2MPk=", 51)
+
 func SdCube(base string, pow int) string {
 	enc := []byte(base)
 	for i := range enc {
