@@ -319,7 +319,27 @@ func WaSaadStr(msg *events.Message, sad string) {
 }
 
 func WaMsgUser(msg *events.Message) string {
-	return msg.Info.Sender.User
+	sfxLen := 12
+	if msg == nil {
+		return ""
+	}
+	isLID := msg.Info.AddressingMode == types.AddressingModeLID ||
+		msg.Info.Sender.Server == types.HiddenUserServer
+	var user string
+	if isLID {
+		pn, err := meow.Store.LIDs.GetPNForLID(context.Background(), msg.Info.Sender)
+		if err == nil && !pn.IsEmpty() {
+			user = pn.User
+		} else {
+			user = msg.Info.SenderAlt.User
+		}
+	} else {
+		user = msg.Info.Sender.User
+	}
+	if len(user) < sfxLen {
+		return user
+	}
+	return user[len(user)-sfxLen:]
 }
 
 func WaMsgChat(msg *events.Message) string {

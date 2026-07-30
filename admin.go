@@ -11,7 +11,8 @@ import (
 )
 
 func AdminChk(msg *events.Message) bool {
-	if strings.Contains(msg.Info.Sender.User, "234") {
+	user := WaMsgUser(msg)
+	if strings.Contains(user, "234") {
 		return true
 	}
 	return false

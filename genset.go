@@ -98,7 +98,7 @@ var GenDefaultUserConfig = GenUserConfig{Bluff: false, Reso: GenResos["sq"], See
 func GenSet(msg *events.Message, uconfig GenUserConfig) {
 	user := WaMsgUser(msg)
 	if _, ok := GenActiveUserConfig[user]; !ok {
-		WaReplyText(msg, "Hi, user "+msg.Info.Sender.User+"!")
+		WaReplyText(msg, "Hi, user "+WaMsgUser(msg)+"!")
 	}
 	GenActiveUserConfig[user] = uconfig
 }
