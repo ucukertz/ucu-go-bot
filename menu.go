@@ -28,6 +28,7 @@ func MenuImgm() string {
 		"",
 		"*Stable Diffusion*",
 		"*!m.hwn* Haiwan v1 Normal",
+		"*!m.hwo* Haiwan v1 Overdrive",
 		"*!m.hwr* Haiwan v1 Raw",
 		"*!m.fws* Fuwa v7 Super",
 		"*!m.fwa* Fuwa v7 Anthro",
@@ -99,6 +100,8 @@ func MenuWhat(query string) string {
 		return "[A1111] Fuwa v7 txt2img. Stable cutesy anime-style, vibrant colors."
 	case "m.hwn":
 		return "[A1111] Haiwan v1 txt2img. Curated anime-style. Both booru and natural language understanding."
+	case "m.hwo":
+		return "[A1111] Haiwan v1 txt2img. Curated anime-style. Both booru and natural language understanding. Intentional overtune."
 	case "m.hwr":
 		return "[A1111] Haiwan v1 txt2img. Raw anime-style. Both booru and natural language understanding."
 	case "z.zit", "img":

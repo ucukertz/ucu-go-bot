@@ -61,7 +61,7 @@ func (ckpt *SdCkpt) AddPrompt(prepos string, postpos string, preneg string, post
 var SdPostpos = "BREAK vibrant_colors, colorful, masterpiece, best quality, amazing quality, very aesthetic, absurdres, newest, "
 var SdPostneg = fmt.Sprintln("zombie, chibi, bald, bad anatomy, poorly drawn, deformed anatomy, deformed fingers, censored, mosaic_censoring, bar_censor, shota, white_pupils, empty_eyes, multicolored_hair," +
 	"BREAK lowres, (bad quality, worst quality:1.2), sketch, jpeg artifacts, censor, blurry, watermark, ")
-var AnPostneg = "worst quality, low quality, blurry, (censored, mosaic censoring, bar censor, artist name, watermark:1.2), (bad hands, missing fingers, fewer fingers, bad legs, missing legs, fewer legs, 6fingers, 3hands, 3legs, 6toes:1.1), sepia, text"
+var AnPostneg = "worst quality, low quality, score_1, score_2, score_3, blurry, desaturated, monochrome, jpeg artifacts, sepia, low quality, worst quality, blurry, bad anatomy, extra limbs, deformed, watermark, text, signature, bareness, artifacts, hands, copyrights name, jpeg_artifacts, scan_artifacts, bad hands, missing fingers, extra digit, fewer digits, artistic error, deviantart, logo, patreon logo,"
 
 var SdCkpts = map[string]SdCkpt{
 	"!m.wai": *new(SdCkpt).Create("wai").Sampling("", "", 0, 0).AddPrompt("", SdPostpos, "", SdPostneg),
@@ -69,7 +69,8 @@ var SdCkpts = map[string]SdCkpt{
 	"!m.fwt": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt("", SdPostpos+SdTurbo, "", SdPostneg),
 	"!m.fws": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt(SdFws, SdPostpos+SdTurbo, "", SdPostneg),
 	"!m.fwa": *new(SdCkpt).Create("fuwa").Sampling("", "Normal", 16, 2).AddPrompt(SdFwa, SdSugar+SdPostpos+SdTurbo, "", SdPostneg),
-	"!m.hwn": *new(SdCkpt).Create("haiwan").Sampling("", "Normal", 16, 2).AddPrompt(AnHwn, Anturbo, "", AnPostneg),
+	"!m.hwn": *new(SdCkpt).Create("haiwan").Sampling("", "Normal", 32, 4).AddPrompt(AnHwn, AnSugar, "", AnPostneg),
+	"!m.hwo": *new(SdCkpt).Create("haiwan").Sampling("", "Normal", 32, 4).AddPrompt(AnHwo, AnSugar, "", AnPostneg),
 	"!m.hwr": *new(SdCkpt).Create("haiwan").Sampling("", "Normal", 16, 2).AddPrompt(AnHwr, Anturbo, "", AnPostneg),
 }
 
