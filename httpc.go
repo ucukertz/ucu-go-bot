@@ -16,7 +16,7 @@ func HttpcBase() *resty.Client {
 		AddRequestMiddleware(HttpcMidwareBeforeReq).
 		AddResponseMiddleware(HttpcMidwareAfterRes).
 		SetResponseBodyUnlimitedReads(true).
-		EnableTrace()
+		SetTrace(true)
 }
 
 type HttpcCtxKey string
@@ -33,7 +33,7 @@ func HttpcMidwareBeforeReq(c *resty.Client, r *resty.Request) error {
 
 func HttpcMidwareAfterRes(c *resty.Client, r *resty.Response) error {
 	id := r.Request.Context().Value(HttpcCtxKey("ID")).(string)
-	if err := r.Err; err != nil {
+	if err := r.CascadeError; err != nil {
 		url := r.Request.Context().Value(HttpcCtxKey("URL")).(string)
 		if v, ok := r.Request.Body.(string); ok {
 			log.Error().Err(err).Str("ID", id).Str("URL", url).Str("ReqBody", v).Msg("HTTPC err")
