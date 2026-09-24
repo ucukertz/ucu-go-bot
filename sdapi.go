@@ -232,13 +232,14 @@ func SdUpscale(msg *events.Message, cmd string) {
 
 	// Prepare image and config
 	ucfg := GenGet(msg)
-	img := WaMsgMedia(msg)
+	img, ierr := WaMsgMediaOrQuoted(msg)
 	if img == nil {
-		img = WaMsgMediaQuoted(msg)
-		if img == nil {
-			WaSaadStr(msg, "No image to upscale ☹️")
+		if ierr != nil {
+			WaSaad(msg, WaSaadExpired)
 			return
 		}
+		WaSaadStr(msg, "No image to upscale ☹️")
+		return
 	}
 
 	imgimg, err := PicImgImgFromBytes(img)
@@ -246,7 +247,10 @@ func SdUpscale(msg *events.Message, cmd string) {
 		WaSaad(msg, err)
 		return
 	}
-	imgimg = resize.Thumbnail(1344, 1344, imgimg, resize.Lanczos3)
+	if imgimg.Bounds().Dx()*imgimg.Bounds().Dy() > 2048*2048 {
+		resize_w, resize_h := PicResoAdjust(imgimg.Bounds().Dx(), imgimg.Bounds().Dy(), 2048*2048)
+		imgimg = resize.Resize(uint(resize_w), uint(resize_h), imgimg, resize.Lanczos3)
+	}
 	init_image := new(bytes.Buffer)
 	if err := png.Encode(init_image, imgimg); err != nil {
 		WaSaad(msg, err)
@@ -254,6 +258,7 @@ func SdUpscale(msg *events.Message, cmd string) {
 	}
 	target_w := imgimg.Bounds().Dx() * 2
 	target_h := imgimg.Bounds().Dy() * 2
+	target_w, target_h = PicResoAdjust(target_w, target_h, 2048*2048)
 
 	log.Info().Msg("[SD POSITIVE] " + pos)
 	log.Info().Msg("[SD NEGATIVE] " + neg)

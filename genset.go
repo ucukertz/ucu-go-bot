@@ -260,8 +260,13 @@ func GenCmdChk(msg *events.Message, cmd string) bool {
 	if strings.HasPrefix(cmd, "!pic") {
 		pic := WaMsgMedia(msg)
 		if pic == nil && !strings.HasSuffix(cmd, "0") {
-			pic = WaMsgMediaQuoted(msg)
+			var err error
+			pic, err = WaMsgMediaQuoted(msg)
 			if pic == nil {
+				if err != nil {
+					WaSaad(msg, WaSaadExpired)
+					return true
+				}
 				WaReplyText(msg, "No image to set ☹️")
 				return true
 			}

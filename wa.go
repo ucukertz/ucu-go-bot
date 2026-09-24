@@ -27,6 +27,7 @@ var synctime = time.Now()
 var meow *whatsmeow.Client
 
 var WaSaadFallen = fmt.Errorf("The request has fallen. Megabytes must free.")
+var WaSaadExpired = fmt.Errorf("Quoted media expired 💀\nRetry by direct upload")
 
 func WaSendText(chat types.JID, text string) {
 	rmsg := waE2E.Message{
@@ -375,53 +376,43 @@ func WaMsgPrompt(msg *events.Message) string {
 	return strings.Join(split, " ")
 }
 
-func WaMediaFromE2e(e2e *waE2E.Message) []byte {
-	if img := e2e.GetImageMessage(); img != nil {
-		res, err := meow.Download(context.Background(), img)
-		if err != nil {
-			return nil
+func WaMediaFromE2e(e2e *waE2E.Message) ([]byte, error) {
+	evt := &events.Message{RawMessage: e2e}
+
+	res, err := meow.DownloadAny(context.Background(), evt.UnwrapRaw().Message)
+	if err != nil {
+		// "No media here" is the normal case for a text reply, not a failure.
+		if errors.Is(err, whatsmeow.ErrNothingDownloadableFound) {
+			return nil, nil
 		}
-		return res
+		log.Warn().Err(err).Msg("MEDIA: download failed")
+		return nil, err
 	}
-	if video := e2e.GetVideoMessage(); video != nil {
-		res, err := meow.Download(context.Background(), video)
-		if err != nil {
-			return nil
-		}
-		return res
-	}
-	if audio := e2e.GetAudioMessage(); audio != nil {
-		res, err := meow.Download(context.Background(), audio)
-		if err != nil {
-			return nil
-		}
-		return res
-	}
-	if document := e2e.GetDocumentMessage(); document != nil {
-		res, err := meow.Download(context.Background(), document)
-		if err != nil {
-			return nil
-		}
-		return res
-	}
-	return nil
+	return res, nil
 }
 
 func WaMsgMedia(msg *events.Message) []byte {
-	e2e := msg.Message
-	return WaMediaFromE2e(e2e)
+	res, _ := WaMediaFromE2e(msg.Message)
+	return res
 }
 
-func WaMsgMediaQuoted(msg *events.Message) []byte {
+func WaMsgMediaQuoted(msg *events.Message) ([]byte, error) {
 	if msg.Message.GetExtendedTextMessage() == nil {
-		return nil
+		return nil, nil
 	}
 	quoted := msg.Message.GetExtendedTextMessage().GetContextInfo().GetQuotedMessage()
 	if quoted == nil {
-		return nil
+		return nil, nil
 	}
 
 	return WaMediaFromE2e(quoted)
+}
+
+func WaMsgMediaOrQuoted(msg *events.Message) ([]byte, error) {
+	if img := WaMsgMedia(msg); img != nil {
+		return img, nil
+	}
+	return WaMsgMediaQuoted(msg)
 }
 
 func WaCmdHandle(msg *events.Message) {
@@ -434,6 +425,8 @@ func WaCmdHandle(msg *events.Message) {
 	} else if ok := ChatCmdChk(msg, cmd); ok {
 		return
 	} else if ok := HugCmdChk(msg, cmd); ok {
+		return
+	} else if ok := ModCmdChk(msg, cmd); ok {
 		return
 	} else if ok := MenuCmdChk(msg, cmd); ok {
 		return

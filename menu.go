@@ -70,7 +70,7 @@ func MenuImge() string {
 		"*Image editing*",
 		"",
 		"*Natural Language Editing*",
-		"*!z.qie* Qwen Image Edit",
+		"*!m.qie* Qwen Image Edit",
 		"*!m.flx* Flux Kontext",
 		"",
 		"*Specialized editing*",
@@ -110,8 +110,8 @@ func MenuWhat(query string) string {
 		return "Wai Illus v12-16 txt2img. Most popular public booru SDXL model. You can choose v12-16 (ex: !z.wai.15)."
 	case "z.tag":
 		return "Get booru tags for an image."
-	case "z.qie":
-		return "Qwen Image Edit img2img. Natural language editing. Supports multiple input images. Use `!qie.r` to use custom resolution."
+	case "m.qie":
+		return "[Modal] Qwen Image Edit img2img. Natural language editing. Supports multiple input images. Use `!m.qie.r` to use custom resolution."
 	case "m.flx":
 		return "Flux Kontext txtimg2img. Natural Language Editing."
 	case "z.qma":

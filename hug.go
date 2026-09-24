@@ -51,97 +51,15 @@ func HugZit(msg *events.Message) {
 	WaReplyImg(msg, img, dur)
 }
 
-func HugQie(msg *events.Message, cmd string) {
-	prompt := WaMsgPrompt(msg)
-	if len(prompt) == 0 {
-		WaReplyText(msg, "Prompt where?")
-		return
-	}
-
-	s := hfs.NewHfs[any, any]("linoyts-qwen-image-edit-2511-fast").
-		WithBearerToken(ENV_TOKEN_HUGGING).
-		WithTimeout(HFS_TIMEOUT)
-
-	ucfg := GenGet(msg)
-	iimg := WaMsgMedia(msg)
-	if iimg == nil {
-		iimg = WaMsgMediaQuoted(msg)
-	}
-	firstImg := iimg
-	iimgarr := []any{}
-	if iimg != nil {
-		fd, err := hfs.NewFileData("input.jpg").FromUpload(*s, iimg)
-		if err != nil {
-			WaSaad(msg, err)
-			return
-		}
-		iimgarr = append(iimgarr, map[string]any{"image": fd, "caption": nil})
-	} else {
-		if ucfg.Pics[0] == nil {
-			WaReplyText(msg, "No image to edit ☹️")
-			return
-		}
-		firstImg = ucfg.Pics[0]
-		for _, iimg = range ucfg.Pics {
-			if iimg == nil {
-				break
-			}
-			fd, err := hfs.NewFileData("input.jpg").FromUpload(*s, iimg)
-			if err != nil {
-				WaSaad(msg, err)
-				return
-			}
-			iimgarr = append(iimgarr, map[string]any{"image": fd, "caption": nil})
-		}
-	}
-
-	log.Info().Msg("HUG QIE start")
-	t_start := time.Now()
-
-	const max_reso_dim = 1168
-	reso := ucfg.Reso
-	target_w, target_h := PicResoAdjust(reso.Width, reso.Height, max_reso_dim)
-
-	if !strings.HasSuffix(cmd, ".r") {
-		imgimg, _ := PicImgImgFromBytes(firstImg)
-		target_w, target_h = PicResoAdjust(imgimg.Bounds().Dx(), imgimg.Bounds().Dy(), max_reso_dim)
-	}
-
-	rsp, err := s.Do("/infer",
-		iimgarr,
-		prompt,
-		42,
-		true,
-		1,
-		4,
-		target_h,
-		target_w,
-		false,
-	)
-	if err != nil {
-		WaSaad(msg, err)
-		return
-	}
-
-	img, err := hfs.GetGalleryImage(rsp[0], 0)
-	if err != nil {
-		WaSaad(msg, err)
-		return
-	}
-
-	t_all := time.Since(t_start).Round(time.Second)
-	caption := fmt.Sprintf("%s\n%dx%d", t_all, target_w, target_h)
-	WaReplyImg(msg, img, caption)
-}
-
 func HugQma(msg *events.Message, cmd string) {
-	iimg := WaMsgMedia(msg)
+	iimg, ierr := WaMsgMediaOrQuoted(msg)
 	if iimg == nil {
-		iimg = WaMsgMediaQuoted(msg)
-		if iimg == nil {
-			WaReplyText(msg, "No image to edit ☹️")
+		if ierr != nil {
+			WaSaad(msg, WaSaadExpired)
 			return
 		}
+		WaReplyText(msg, "No image to edit ☹️")
+		return
 	}
 
 	// cmd is expected with this format: !x.qma.rot.elv.dst
@@ -275,13 +193,14 @@ func HugWai(msg *events.Message, cmd string) {
 }
 
 func HugTag(msg *events.Message) {
-	iimg := WaMsgMedia(msg)
+	iimg, ierr := WaMsgMediaOrQuoted(msg)
 	if iimg == nil {
-		iimg = WaMsgMediaQuoted(msg)
-		if iimg == nil {
-			WaReplyText(msg, "No image to tag ☹️")
+		if ierr != nil {
+			WaSaad(msg, WaSaadExpired)
 			return
 		}
+		WaReplyText(msg, "No image to tag ☹️")
+		return
 	}
 
 	fd, _ := hfs.NewFileData("input").FromBytes(iimg)
@@ -299,13 +218,14 @@ func HugTag(msg *events.Message) {
 }
 
 func HugRbg(msg *events.Message) {
-	iimg := WaMsgMedia(msg)
+	iimg, ierr := WaMsgMediaOrQuoted(msg)
 	if iimg == nil {
-		iimg = WaMsgMediaQuoted(msg)
-		if iimg == nil {
-			WaReplyText(msg, "No image to edit ☹️")
+		if ierr != nil {
+			WaSaad(msg, WaSaadExpired)
 			return
 		}
+		WaReplyText(msg, "No image to edit ☹️")
+		return
 	}
 
 	fd, _ := hfs.NewFileData("input").FromBytes(iimg)
@@ -347,9 +267,6 @@ func HugCmdChk(msg *events.Message, cmd string) bool {
 		return true
 	} else if strings.HasPrefix(cmd, AdminDevDiff("!x.qma", "!z.qma")) {
 		go HugQma(msg, cmd)
-		return true
-	} else if strings.HasPrefix(cmd, AdminDevDiff("!x.qie", "!z.qie")) {
-		go HugQie(msg, cmd)
 		return true
 	}
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"math/rand/v2"
 	"os"
 	"regexp"
@@ -14,6 +13,12 @@ import (
 
 func GachaRand64(min int64, max int64) int64 {
 	return rand.Int64N(max-min+1) + min
+}
+
+type GachaMeme struct {
+	Prompt string `json:"prompt"`
+	Top    string `json:"top"`
+	Bot    string `json:"bot"`
 }
 
 func GachaTokke(msg *events.Message) {
@@ -37,29 +42,18 @@ func GachaTokke(msg *events.Message) {
 	prompt [natural language prompt to generate the meme picture], top [top text]. bot [bottom text]. 
 	Answer purely with the json, no code blocks.`
 
-	aians, err := ChatGaiTextOnce(msg, WaMsgStr(msg), hint)
+	meme, err := ChatGaiObjOnce[GachaMeme](msg, WaMsgStr(msg), hint)
 	if err != nil {
 		if strings.Contains(err.Error(), "overload") {
 			WaReact(msg, "🤕")
 		} else {
-			WaSaad(msg, err)
+			log.Warn().Err(err).Msg("TOKKE")
+			WaReact(msg, "😭")
 		}
 		return
 	}
-	log.Debug().Str("aians", aians).Msg("TOKKE")
 
-	var ais struct {
-		P string `json:"prompt"`
-		T string `json:"top"`
-		B string `json:"bot"`
-	}
-
-	if err := json.Unmarshal([]byte(aians), &ais); err != nil {
-		WaReact(msg, "😭")
-		return
-	}
-
-	query := "Meme of " + ais.P + ". Top text '" + ais.T + "'. Bottom text '" + ais.B + "'."
+	query := "Meme of " + meme.Prompt + ". Top text '" + meme.Top + "'. Bottom text '" + meme.Bot + "'."
 	img, err := hfs.NewHfs[any, any]("mrfakename-z-image-turbo").
 		WithBearerToken(ENV_TOKEN_HUGGING).
 		WithTimeout(HFS_TIMEOUT).

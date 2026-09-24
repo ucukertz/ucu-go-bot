@@ -1,16 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
-	"fmt"
-	"image/png"
 	"net/http"
 	"strings"
-	"time"
 
-	"github.com/nfnt/resize"
 	"github.com/zendev-sh/goai"
 	"github.com/zendev-sh/goai/provider"
 	"github.com/zendev-sh/goai/provider/google"
@@ -21,8 +16,6 @@ const (
 	CHAT_HISTORY_MAX_LEN = 50
 	CHAT_MAX_ATTEMPT     = 10
 	GEMINI_MODEL         = "gemini-2.5-flash"
-
-	KONTEXT_TIMEOUT = 300 * time.Second
 )
 
 // ChatNew creates a new empty message history
@@ -37,6 +30,32 @@ func ChatReset(msg *events.Message) []provider.Message {
 }
 
 var GaiHistory []provider.Message = nil
+
+func ChatGaiObjOnce[T any](msg *events.Message, query string, hint string) (T, error) {
+	var zero T
+	var err error
+	model := google.Chat(GEMINI_MODEL, google.WithAPIKey(ENV_TOKEN_GEMINI))
+
+	for attempt := 1; attempt <= CHAT_MAX_ATTEMPT; attempt++ {
+		result, gerr := goai.GenerateObject[T](context.Background(), model,
+			goai.WithSystem(hint),
+			goai.WithPrompt(query),
+		)
+		if err = gerr; err == nil {
+			return result.Object, nil
+		}
+
+		log.Trace().Int("attempt", attempt).Err(err).Msg("ChatGaiObjOnce RETRY")
+		if attempt == 1 && msg != nil {
+			WaReact(msg, "⏳")
+		}
+		if attempt < CHAT_MAX_ATTEMPT {
+			AdminBackoff(attempt)
+		}
+	}
+
+	return zero, err
+}
 
 func ChatGaiTextOnce(msg *events.Message, query string, hint string) (string, error) {
 	var err error
@@ -98,10 +117,7 @@ func ChatGaiConvo(msg *events.Message) {
 		GaiHistory = ChatNew()
 	}
 
-	qryMedia := WaMsgMedia(msg)
-	if qryMedia == nil {
-		qryMedia = WaMsgMediaQuoted(msg)
-	}
+	qryMedia, _ := WaMsgMediaOrQuoted(msg)
 
 	prompt := WaMsgPrompt(msg)
 	userMsg := provider.Message{
@@ -171,77 +187,10 @@ func ChatGaiConvo(msg *events.Message) {
 	}
 }
 
-func ChatKontext(msg *events.Message) {
-	t_start := time.Now()
-	defer func() {
-		log.Info().Str("took", fmt.Sprintf("%s", time.Since(t_start).Round(time.Second))).Msg("KONTEXT END")
-	}()
-
-	var reqbody struct {
-		Prompt string `json:"prompt,omitempty"`
-		Img    string `json:"input_image,omitempty"`
-	}
-
-	img := WaMsgMedia(msg)
-	if img == nil {
-		img = WaMsgMediaQuoted(msg)
-		if img == nil {
-			WaSaadStr(msg, "No image to edit ☹️")
-			return
-		}
-	}
-
-	imgimg, err := PicImgImgFromBytes(img)
-	if err != nil {
-		log.Error().Err(err).Msg("IMGCONV")
-		WaSaadStr(msg, "IMGCONV: "+err.Error())
-		return
-	}
-
-	imgr := resize.Thumbnail(1344, 1344, imgimg, resize.Lanczos3)
-	thumbbuf := new(bytes.Buffer)
-	if err := png.Encode(thumbbuf, imgr); err != nil {
-		log.Error().Err(err).Msg("PNG ENCODE")
-		WaSaadStr(msg, "PNG ENCODE: "+err.Error())
-		return
-	}
-
-	reqbody.Img = base64.StdEncoding.EncodeToString(thumbbuf.Bytes())
-	reqbody.Prompt = WaMsgPrompt(msg)
-
-	r, err := HttpcBase().SetTimeout(KONTEXT_TIMEOUT).SetBasicAuth(ENV_BAUTH_SDAPI_USER, ENV_BAUTH_SDAPI_PASS).
-		R().SetBody(reqbody).Post(ENV_BASEURL_KONTEXT)
-	if err != nil {
-		WaSaadStr(msg, "KONTEXT: "+err.Error())
-		return
-	}
-	if r.StatusCode() != http.StatusOK {
-		if r.StatusCode() == http.StatusTooManyRequests {
-			WaReact(msg, "💸")
-			return
-		} else {
-			WaSaadStr(msg, "KONTEXT DED "+r.Status())
-			return
-		}
-	}
-
-	image, err := base64.StdEncoding.DecodeString(r.String())
-	if err != nil {
-		WaSaadStr(msg, "KONTEXT DECODE: "+err.Error())
-		return
-	}
-	t_all := time.Since(t_start).Round(time.Second)
-	t_str := fmt.Sprintf("%s", t_all)
-	WaReplyImg(msg, image, t_str)
-}
-
 func ChatCmdChk(msg *events.Message, cmd string) bool {
 	switch cmd {
 	case AdminDevDiff("!xai", "!ai"):
 		go ChatGaiConvo(msg)
-		return true
-	case AdminDevDiff("!x.flx", "!m.flx"):
-		go ChatKontext(msg)
 		return true
 	}
 
