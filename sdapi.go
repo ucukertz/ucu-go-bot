@@ -248,7 +248,7 @@ func SdUpscale(msg *events.Message, cmd string) {
 		return
 	}
 	if imgimg.Bounds().Dx()*imgimg.Bounds().Dy() > 2048*2048 {
-		resize_w, resize_h := PicResoAdjust(imgimg.Bounds().Dx(), imgimg.Bounds().Dy(), 2048*2048)
+		resize_w, resize_h := PicResoAdjust(imgimg.Bounds().Dx(), imgimg.Bounds().Dy(), PIC_RESO_2k)
 		imgimg = resize.Resize(uint(resize_w), uint(resize_h), imgimg, resize.Lanczos3)
 	}
 	init_image := new(bytes.Buffer)
@@ -258,7 +258,7 @@ func SdUpscale(msg *events.Message, cmd string) {
 	}
 	target_w := imgimg.Bounds().Dx() * 2
 	target_h := imgimg.Bounds().Dy() * 2
-	target_w, target_h = PicResoAdjust(target_w, target_h, 2048*2048)
+	target_w, target_h = PicResoAdjust(target_w, target_h, PIC_RESO_2k)
 
 	log.Info().Msg("[SD POSITIVE] " + pos)
 	log.Info().Msg("[SD NEGATIVE] " + neg)
